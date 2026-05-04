@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import settings
-from app.routers import outlets
+from app.routers import applications, jobs, outlets, products, roles, staff
 
 app = FastAPI(
     title="Lead Superstore API",
@@ -25,3 +25,8 @@ def health():
 
 
 app.include_router(outlets.router, prefix="/api/outlets", tags=["Outlets"])
+app.include_router(roles.router, prefix="/api/roles", tags=["Roles"])
+app.include_router(staff.router, prefix="/api/staff", tags=["Staff"])
+app.include_router(jobs.router, prefix="/api/jobs", tags=["Jobs"])
+app.include_router(applications.router, prefix="/api/applications", tags=["Applications"])
+app.include_router(products.router, prefix="/api/products", tags=["Products"])
