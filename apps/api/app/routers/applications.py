@@ -5,10 +5,14 @@ from fastapi import APIRouter, HTTPException, Query, status
 from app.core.db import get_supabase
 from app.schemas.job import ApplicationCreate, ApplicationUpdate
 
-router = APIRouter()
+# ============================================================================
+# HR-only router — review and progress applications
+# ============================================================================
+
+admin_router = APIRouter()
 
 
-@router.get("/")
+@admin_router.get("/")
 def list_applications(
     job_posting_id: UUID | None = Query(None),
     status_filter: str | None = Query(None, alias="status"),
@@ -28,7 +32,7 @@ def list_applications(
     return {"count": len(response.data), "applications": response.data}
 
 
-@router.get("/{application_id}")
+@admin_router.get("/{application_id}")
 def get_application(application_id: UUID):
     """Get a single application."""
     supabase = get_supabase()
@@ -46,12 +50,41 @@ def get_application(application_id: UUID):
     return response.data
 
 
-@router.post("/", status_code=status.HTTP_201_CREATED)
-def submit_application(payload: ApplicationCreate):
-    """Submit an application. Public endpoint — used by the careers page."""
+@admin_router.patch("/{application_id}")
+def update_application(application_id: UUID, payload: ApplicationUpdate):
+    """Move application through the hiring pipeline."""
     supabase = get_supabase()
 
-    # Verify the job posting exists and is currently published
+    update_data = payload.model_dump(mode="json", exclude_none=True)
+    if not update_data:
+        raise HTTPException(status_code=400, detail="No fields to update")
+
+    response = (
+        supabase.table("applications")
+        .update(update_data)
+        .eq("id", str(application_id))
+        .execute()
+    )
+
+    if not response.data:
+        raise HTTPException(status_code=404, detail="Application not found")
+
+    return response.data[0]
+
+
+# ============================================================================
+# Public router — submit an application from the e-commerce careers page
+# ============================================================================
+
+public_router = APIRouter()
+
+
+@public_router.post("/", status_code=status.HTTP_201_CREATED)
+def submit_application(payload: ApplicationCreate):
+    """Submit an application. Public endpoint used by the careers page."""
+    supabase = get_supabase()
+
+    # Verify the job is currently accepting applications
     job = (
         supabase.table("job_postings")
         .select("id, status, title")
@@ -82,30 +115,4 @@ def submit_application(payload: ApplicationCreate):
 
     insert_data = payload.model_dump(mode="json", exclude_none=True)
     response = supabase.table("applications").insert(insert_data).execute()
-
-    if not response.data:
-        raise HTTPException(status_code=500, detail="Failed to submit application")
-
-    return response.data[0]
-
-
-@router.patch("/{application_id}")
-def update_application(application_id: UUID, payload: ApplicationUpdate):
-    """HR endpoint — move application through the hiring pipeline."""
-    supabase = get_supabase()
-
-    update_data = payload.model_dump(mode="json", exclude_none=True)
-    if not update_data:
-        raise HTTPException(status_code=400, detail="No fields to update")
-
-    response = (
-        supabase.table("applications")
-        .update(update_data)
-        .eq("id", str(application_id))
-        .execute()
-    )
-
-    if not response.data:
-        raise HTTPException(status_code=404, detail="Application not found")
-
     return response.data[0]

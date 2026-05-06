@@ -51,34 +51,8 @@ def get_staff(staff_id: UUID):
 def create_staff(payload: StaffCreate):
     """Onboard a new staff member."""
     supabase = get_supabase()
-
-    # Validate FK references explicitly to give clear error messages.
-    outlet_check = (
-        supabase.table("outlets").select("id").eq("id", str(payload.outlet_id)).execute()
-    )
-    if not outlet_check.data:
-        raise HTTPException(status_code=400, detail=f"Outlet {payload.outlet_id} not found")
-
-    role_check = supabase.table("roles").select("id").eq("id", payload.role_id).execute()
-    if not role_check.data:
-        raise HTTPException(status_code=400, detail=f"Role '{payload.role_id}' not found")
-
-    # Email uniqueness check (Postgres will enforce too, but this gives a clean error).
-    if payload.email:
-        existing = (
-            supabase.table("staff").select("id").eq("email", payload.email).execute()
-        )
-        if existing.data:
-            raise HTTPException(
-                status_code=409, detail=f"A staff member with email {payload.email} already exists"
-            )
-
     insert_data = payload.model_dump(mode="json", exclude_none=True)
     response = supabase.table("staff").insert(insert_data).execute()
-
-    if not response.data:
-        raise HTTPException(status_code=500, detail="Failed to create staff member")
-
     return response.data[0]
 
 
@@ -86,33 +60,16 @@ def create_staff(payload: StaffCreate):
 def update_staff(staff_id: UUID, payload: StaffUpdate):
     """Update a staff member. Only provided fields are changed."""
     supabase = get_supabase()
-
     update_data = payload.model_dump(mode="json", exclude_none=True)
     if not update_data:
         raise HTTPException(status_code=400, detail="No fields to update")
 
-    # Validate FK references if they're being changed
-    if "outlet_id" in update_data:
-        outlet_check = (
-            supabase.table("outlets")
-            .select("id")
-            .eq("id", update_data["outlet_id"])
-            .execute()
-        )
-        if not outlet_check.data:
-            raise HTTPException(status_code=400, detail="Outlet not found")
-
-    if "role_id" in update_data:
-        role_check = (
-            supabase.table("roles").select("id").eq("id", update_data["role_id"]).execute()
-        )
-        if not role_check.data:
-            raise HTTPException(status_code=400, detail="Role not found")
-
     response = (
-        supabase.table("staff").update(update_data).eq("id", str(staff_id)).execute()
+        supabase.table("staff")
+        .update(update_data)
+        .eq("id", str(staff_id))
+        .execute()
     )
-
     if not response.data:
         raise HTTPException(status_code=404, detail="Staff member not found")
 
@@ -121,7 +78,7 @@ def update_staff(staff_id: UUID, payload: StaffUpdate):
 
 @router.post("/{staff_id}/activate")
 def activate_staff(staff_id: UUID):
-    """Promote staff from onboarding to active. Convenience endpoint."""
+    """Promote staff from onboarding to active."""
     supabase = get_supabase()
     response = (
         supabase.table("staff")

@@ -1,3 +1,4 @@
+from collections import defaultdict
 from datetime import date, datetime, timezone
 from decimal import Decimal
 from uuid import UUID
@@ -23,7 +24,9 @@ router = APIRouter()
 @router.get("/salary-structures")
 def list_salary_structures(staff_id: UUID | None = Query(None)):
     supabase = get_supabase()
-    query = supabase.table("salary_structures").select("*, staff(first_name, last_name)")
+    query = supabase.table("salary_structures").select(
+        "*, staff!salary_structures_staff_id_fkey(first_name, last_name)"
+    )
     if staff_id:
         query = query.eq("staff_id", str(staff_id))
     response = query.order("effective_from", desc=True).execute()
@@ -38,12 +41,6 @@ def create_salary_structure(payload: SalaryStructureCreate):
     this new one starts.
     """
     supabase = get_supabase()
-
-    staff_check = (
-        supabase.table("staff").select("id").eq("id", str(payload.staff_id)).execute()
-    )
-    if not staff_check.data:
-        raise HTTPException(status_code=404, detail="Staff member not found")
 
     # Close any currently open structure
     open_structures = (
@@ -86,7 +83,7 @@ def list_payroll_periods(
 
 @router.get("/periods/{period_id}")
 def get_payroll_period(period_id: UUID):
-    """Get a payroll period with all its entries (incl. snapshotted bank details)."""
+    """Get a payroll period with all its entries."""
     supabase = get_supabase()
 
     period = (
@@ -111,25 +108,16 @@ def get_payroll_period(period_id: UUID):
 
 @router.post("/periods", status_code=status.HTTP_201_CREATED)
 def create_payroll_period(payload: PayrollPeriodCreate):
+    """Create a draft payroll period for an outlet."""
     supabase = get_supabase()
 
     if payload.period_end <= payload.period_start:
-        raise HTTPException(status_code=400, detail="period_end must be after period_start")
-
-    outlet_check = (
-        supabase.table("outlets").select("id").eq("id", str(payload.outlet_id)).execute()
-    )
-    if not outlet_check.data:
-        raise HTTPException(status_code=400, detail="Outlet not found")
+        raise HTTPException(
+            status_code=400, detail="period_end must be after period_start"
+        )
 
     insert_data = payload.model_dump(mode="json", exclude_none=True)
     response = supabase.table("payroll_periods").insert(insert_data).execute()
-    if not response.data:
-        raise HTTPException(
-            status_code=409,
-            detail="A payroll period already exists for this outlet and date range",
-        )
-
     return response.data[0]
 
 
@@ -140,7 +128,8 @@ def generate_payroll_entries(period_id: UUID):
     For each staff:
       - Pull active salary structure (gross_salary)
       - Snapshot bank details onto the entry
-      - Pull pending deductions: active loan installments, pending advances, approved fines
+      - Pull pending deductions: active loan installments, pending advances,
+        approved fines
       - Sum into entry.deductions, snapshot each into payroll_entry_deductions
       - Compute net = (working_days/30) * gross - deductions
     """
@@ -157,36 +146,40 @@ def generate_payroll_entries(period_id: UUID):
         raise HTTPException(status_code=404, detail="Payroll period not found")
     if period.data["status"] != "draft":
         raise HTTPException(
-            status_code=400, detail="Cannot regenerate — period is no longer in draft"
+            status_code=400,
+            detail="Cannot regenerate — period is no longer in draft",
         )
 
     outlet_id = period.data["outlet_id"]
     period_end = period.data["period_end"]
 
     # === Unwind any prior generation ===
-    # Get entry IDs first, then collect their deduction snapshots so we can revert source items
     prior_entries = (
-        supabase.table("payroll_entries").select("id").eq("period_id", str(period_id)).execute()
+        supabase.table("payroll_entries")
+        .select("id")
+        .eq("period_id", str(period_id))
+        .execute()
     )
     if prior_entries.data:
-        prior_entry_ids = [e["id"] for e in prior_entries.data]
-        # Revert advances and fines that pointed at this period (they'll be re-applied below)
+        # Revert advances and fines that pointed at this period
         supabase.table("salary_advances").update(
             {"status": "pending", "applied_to_period_id": None}
         ).eq("applied_to_period_id", str(period_id)).execute()
         supabase.table("fines").update(
             {"status": "approved", "applied_to_period_id": None}
         ).eq("applied_to_period_id", str(period_id)).execute()
-        # Loans don't get reverted on draft regeneration — their balance stays as-is.
-        # On approve, we'll commit the loan deduction. On unwind here, since we never
-        # actually decremented the balance during draft generation, nothing to revert.
-        # Cascade-delete entry deduction snapshots
-        supabase.table("payroll_entries").delete().eq("period_id", str(period_id)).execute()
+        # Cascade-delete entries (and their deduction snapshots)
+        supabase.table("payroll_entries").delete().eq(
+            "period_id", str(period_id)
+        ).execute()
 
     # === Pull active staff at this outlet ===
     staff_resp = (
         supabase.table("staff")
-        .select("id, first_name, last_name, bank_name, bank_account_number, bank_account_name")
+        .select(
+            "id, first_name, last_name, bank_name, "
+            "bank_account_number, bank_account_name"
+        )
         .eq("outlet_id", outlet_id)
         .eq("status", "active")
         .execute()
@@ -215,7 +208,9 @@ def generate_payroll_entries(period_id: UUID):
             None,
         )
         if not active:
-            skipped.append(f"{staff['first_name']} {staff['last_name']} (no salary set)")
+            skipped.append(
+                f"{staff['first_name']} {staff['last_name']} (no salary set)"
+            )
             continue
 
         gross = Decimal(str(active["gross_salary"]))
@@ -242,7 +237,9 @@ def generate_payroll_entries(period_id: UUID):
                         "source_type": "loan",
                         "source_id": loan["id"],
                         "amount": float(applied),
-                        "description": f"Loan installment (₦{loan['principal']:.0f} principal)",
+                        "description": (
+                            f"Loan installment (₦{loan['principal']:.0f} principal)"
+                        ),
                     }
                 )
                 total_deductions += applied
@@ -262,11 +259,12 @@ def generate_payroll_entries(period_id: UUID):
                     "source_type": "advance",
                     "source_id": adv["id"],
                     "amount": float(amt),
-                    "description": f"Salary advance: {adv.get('reason') or 'no reason given'}",
+                    "description": (
+                        f"Salary advance: {adv.get('reason') or 'no reason given'}"
+                    ),
                 }
             )
             total_deductions += amt
-            # Mark applied immediately
             supabase.table("salary_advances").update(
                 {"status": "applied", "applied_to_period_id": str(period_id)}
             ).eq("id", adv["id"]).execute()
@@ -295,7 +293,9 @@ def generate_payroll_entries(period_id: UUID):
             ).eq("id", fine["id"]).execute()
 
         # === Compute net ===
-        net = compute_net_salary(gross_salary=gross, working_days=30, deductions=total_deductions)
+        net = compute_net_salary(
+            gross_salary=gross, working_days=30, deductions=total_deductions
+        )
 
         # Insert entry
         entry_resp = (
@@ -322,7 +322,9 @@ def generate_payroll_entries(period_id: UUID):
         if deduction_items:
             for item in deduction_items:
                 item["entry_id"] = entry_id
-            supabase.table("payroll_entry_deductions").insert(deduction_items).execute()
+            supabase.table("payroll_entry_deductions").insert(
+                deduction_items
+            ).execute()
 
         total_gross += gross
         total_net += net
@@ -338,6 +340,7 @@ def generate_payroll_entries(period_id: UUID):
         "total_gross": float(total_gross),
         "total_net": float(total_net),
     }
+
 
 @router.post("/periods/{period_id}/approve")
 def approve_payroll_period(period_id: UUID):
@@ -356,7 +359,7 @@ def approve_payroll_period(period_id: UUID):
     if period.data["status"] != "draft":
         raise HTTPException(status_code=400, detail="Period is not in draft status")
 
-    # === Commit loan balance decrements ===
+    # Commit loan balance decrements
     loan_deductions = (
         supabase.table("payroll_entry_deductions")
         .select("source_id, amount, payroll_entries!inner(period_id)")
@@ -365,21 +368,25 @@ def approve_payroll_period(period_id: UUID):
         .execute()
     )
 
-    # Group by loan and sum (a single loan only contributes once per period, but defensive)
-    from collections import defaultdict
     per_loan: dict[str, Decimal] = defaultdict(lambda: Decimal("0"))
     for d in loan_deductions.data:
         per_loan[d["source_id"]] += Decimal(str(d["amount"]))
 
     for loan_id, total in per_loan.items():
-        loan = supabase.table("loans").select("balance").eq("id", loan_id).single().execute()
+        loan = (
+            supabase.table("loans")
+            .select("balance")
+            .eq("id", loan_id)
+            .single()
+            .execute()
+        )
         new_balance = Decimal(str(loan.data["balance"])) - total
         update = {"balance": float(max(new_balance, Decimal("0")))}
         if new_balance <= 0:
             update["status"] = "paid_off"
         supabase.table("loans").update(update).eq("id", loan_id).execute()
 
-    # === Lock the period ===
+    # Lock the period
     response = (
         supabase.table("payroll_periods")
         .update(
@@ -419,16 +426,28 @@ def update_payroll_entry(entry_id: UUID, payload: PayrollEntryUpdate):
         )
 
     gross = Decimal(
-        str(payload.gross_salary if payload.gross_salary is not None else entry.data["gross_salary"])
+        str(
+            payload.gross_salary
+            if payload.gross_salary is not None
+            else entry.data["gross_salary"]
+        )
     )
     working_days = (
-        payload.working_days if payload.working_days is not None else entry.data["working_days"]
+        payload.working_days
+        if payload.working_days is not None
+        else entry.data["working_days"]
     )
     deductions = Decimal(
-        str(payload.deductions if payload.deductions is not None else entry.data["deductions"])
+        str(
+            payload.deductions
+            if payload.deductions is not None
+            else entry.data["deductions"]
+        )
     )
 
-    net = compute_net_salary(gross_salary=gross, working_days=working_days, deductions=deductions)
+    net = compute_net_salary(
+        gross_salary=gross, working_days=working_days, deductions=deductions
+    )
 
     update_data = {
         "gross_salary": float(gross),
@@ -448,6 +467,7 @@ def update_payroll_entry(entry_id: UUID, payload: PayrollEntryUpdate):
 
     _refresh_period_totals(supabase, entry.data["period_id"])
     return response.data[0]
+
 
 @router.get("/entries/{entry_id}/deductions")
 def get_entry_deductions(entry_id: UUID):
