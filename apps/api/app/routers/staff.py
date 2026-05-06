@@ -78,17 +78,67 @@ def update_staff(staff_id: UUID, payload: StaffUpdate):
 
 @router.post("/{staff_id}/activate")
 def activate_staff(staff_id: UUID):
-    """Promote staff from onboarding to active."""
+    """Promote staff from onboarding to active.
+
+    Hard gate: requires at least 1 reference AND 1 guarantor on file.
+    Returns 400 with a clear message listing what's missing if not met.
+    """
     supabase = get_supabase()
-    response = (
+
+    # Verify staff exists
+    staff = (
         supabase.table("staff")
-        .update({"status": "active"})
+        .select("id, status")
         .eq("id", str(staff_id))
         .execute()
     )
-
-    if not response.data:
+    if not staff.data:
         raise HTTPException(status_code=404, detail="Staff member not found")
+
+    # Check verification requirements
+    refs = (
+        supabase.table("staff_references")
+        .select("id")
+        .eq("staff_id", str(staff_id))
+        .limit(1)
+        .execute()
+    )
+    guars = (
+        supabase.table("staff_guarantors")
+        .select("id")
+        .eq("staff_id", str(staff_id))
+        .limit(1)
+        .execute()
+    )
+
+    missing: list[str] = []
+    if not refs.data:
+        missing.append("at least 1 reference")
+    if not guars.data:
+        missing.append("a guarantor")
+
+    if missing:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                f"Cannot activate — verification incomplete. "
+                f"Missing: {', '.join(missing)}."
+            ),
+        )
+
+    # Activate, stamp verification metadata
+    from datetime import datetime, timezone
+    response = (
+        supabase.table("staff")
+        .update(
+            {
+                "status": "active",
+                "verified_at": datetime.now(timezone.utc).isoformat(),
+            }
+        )
+        .eq("id", str(staff_id))
+        .execute()
+    )
 
     return response.data[0]
 

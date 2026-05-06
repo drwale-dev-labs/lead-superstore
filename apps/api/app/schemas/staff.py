@@ -25,7 +25,7 @@ class StaffCreate(StaffBase):
     outlet_id: UUID
     role_id: str
     hired_at: date
-    status: str = Field("onboarding", pattern="^(active|onboarding|inactive|terminated)$")
+    status: str = Field("onboarding", pattern="^(active|onboarding|pending_verification|inactive|terminated)$")
 
 
 class StaffUpdate(BaseModel):
@@ -37,7 +37,7 @@ class StaffUpdate(BaseModel):
     last_name: str | None = Field(None, min_length=1, max_length=100)
     email: EmailStr | None = None
     phone: str | None = None
-    status: str | None = Field(None, pattern="^(active|onboarding|inactive|terminated)$")
+    status: str | None = Field(None, pattern="^(active|onboarding|pending_verification|inactive|terminated)$")
     hired_at: date | None = None
     terminated_at: date | None = None
     notes: str | None = None
