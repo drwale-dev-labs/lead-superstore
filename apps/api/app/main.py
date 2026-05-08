@@ -12,7 +12,8 @@ from app.routers import (
     products,
     roles,
     staff,
-    verification,   
+    transfers,        # ← add
+    verification,
 )
 
 # Tag metadata controls the order and grouping in /docs.
@@ -28,6 +29,7 @@ TAGS_METADATA = [
     {"name": "Careers (Public)", "description": "Public — careers page and apply form. Consumed by e-commerce."},
     {"name": "Products", "description": "Public — product catalog. Consumed by e-commerce."},
     {"name": "Verification", "description": "HR — staff references, guarantors, and document uploads."},
+    {"name": "Transfers", "description": "HR — staff transfers between outlets and roles, with assignment history."},
 ]
 
 
@@ -63,6 +65,7 @@ app.include_router(outlets.router, prefix="/api/outlets", tags=["Outlets"])
 app.include_router(roles.router, prefix="/api/roles", tags=["Roles"])
 app.include_router(staff.router, prefix="/api/staff", tags=["Staff"])
 app.include_router(verification.router, prefix="/api/verification", tags=["Verification"])
+app.include_router(transfers.router, prefix="/api/transfers", tags=["Transfers"])
 app.include_router(payroll.router, prefix="/api/payroll", tags=["Payroll"])
 app.include_router(deductions.router, prefix="/api/deductions", tags=["Deductions"])
 

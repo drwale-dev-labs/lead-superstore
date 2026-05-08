@@ -17,6 +17,7 @@ class StaffBase(BaseModel):
     bank_name: str | None = Field(None, max_length=100)
     bank_account_number: str | None = Field(None, min_length=10, max_length=10)
     bank_account_name: str | None = Field(None, max_length=200)
+    photo_path: str | None = None
 
 
 class StaffCreate(StaffBase):
@@ -26,7 +27,7 @@ class StaffCreate(StaffBase):
     role_id: str
     hired_at: date
     status: str = Field("onboarding", pattern="^(active|onboarding|pending_verification|inactive|terminated)$")
-
+    photo_path: str | None = None
 
 class StaffUpdate(BaseModel):
     """Request body for updating a staff member. All fields optional."""
@@ -44,6 +45,7 @@ class StaffUpdate(BaseModel):
     bank_name: str | None = Field(None, max_length=100)
     bank_account_number: str | None = Field(None, min_length=10, max_length=10)
     bank_account_name: str | None = Field(None, max_length=200)
+    photo_path: str | None = None
 
 
 class Staff(StaffBase):
@@ -55,3 +57,4 @@ class Staff(StaffBase):
     terminated_at: date | None = None
     created_at: datetime
     updated_at: datetime
+    photo_path: str | None = None

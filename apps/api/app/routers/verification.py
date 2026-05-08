@@ -32,19 +32,26 @@ async def _upload_document(file: UploadFile, staff_id: UUID, kind: str) -> tuple
         )
 
     contents = await file.read()
+    if not contents:
+        raise HTTPException(status_code=400, detail="Uploaded file is empty")
     if len(contents) > MAX_FILE_SIZE_BYTES:
         raise HTTPException(status_code=400, detail="File exceeds 5 MB limit")
 
-    # Build a unique path: staff/{staff_id}/{kind}/{uuid}-{filename}
-    safe_filename = file.filename or "document"
+    safe_filename = (file.filename or "document").replace(" ", "_")
     storage_path = f"staff/{staff_id}/{kind}/{uuid4()}-{safe_filename}"
 
     supabase = get_supabase()
-    supabase.storage.from_(STORAGE_BUCKET).upload(
-        path=storage_path,
-        file=contents,
-        file_options={"content-type": file.content_type},
-    )
+    try:
+        supabase.storage.from_(STORAGE_BUCKET).upload(
+            path=storage_path,
+            file=contents,
+            file_options={"content-type": file.content_type},
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Storage upload failed: {str(e)}",
+        )
 
     return storage_path, safe_filename
 
@@ -281,3 +288,72 @@ def get_verification_status(staff_id: UUID):
         "can_activate": can_activate,
         "missing": missing,
     }
+
+# ============================================================================
+# Staff photos
+# ============================================================================
+
+PHOTO_BUCKET = "staff-photos"
+PHOTO_MIME_TYPES = {"image/jpeg", "image/png", "image/webp"}
+MAX_PHOTO_SIZE_BYTES = 2 * 1024 * 1024  # 2 MB
+
+
+@router.post("/staff/{staff_id}/photo")
+async def upload_staff_photo(staff_id: UUID, photo: UploadFile = File(...)):
+    """Upload or replace a staff member's profile photo."""
+    supabase = get_supabase()
+    _validate_staff_exists(supabase, staff_id)
+
+    if photo.content_type not in PHOTO_MIME_TYPES:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Photo type {photo.content_type} not allowed. Use JPEG, PNG, or WebP.",
+        )
+
+    contents = await photo.read()
+    if not contents:
+        raise HTTPException(status_code=400, detail="Photo file is empty")
+    if len(contents) > MAX_PHOTO_SIZE_BYTES:
+        raise HTTPException(status_code=400, detail="Photo exceeds 2 MB limit")
+
+    safe_filename = (photo.filename or "photo").replace(" ", "_")
+    storage_path = f"staff/{staff_id}/{uuid4()}-{safe_filename}"
+
+    try:
+        supabase.storage.from_(PHOTO_BUCKET).upload(
+            path=storage_path,
+            file=contents,
+            file_options={"content-type": photo.content_type},
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Photo upload failed: {str(e)}")
+
+    # Update the staff record with the new path
+    supabase.table("staff").update({"photo_path": storage_path}).eq(
+        "id", str(staff_id)
+    ).execute()
+
+    return {"staff_id": str(staff_id), "photo_path": storage_path}
+
+
+@router.get("/staff/{staff_id}/photo-url")
+def get_staff_photo_url(staff_id: UUID, expires_in: int = 3600):
+    """Generate a signed URL for the staff photo. Valid for 1 hour by default."""
+    supabase = get_supabase()
+    staff = _validate_staff_exists(supabase, staff_id)
+
+    # We need to fetch the photo_path from staff
+    full = (
+        supabase.table("staff").select("photo_path").eq("id", str(staff_id)).single().execute()
+    )
+    photo_path = full.data.get("photo_path")
+    if not photo_path:
+        raise HTTPException(status_code=404, detail="No photo on file for this staff member")
+
+    try:
+        result = supabase.storage.from_(PHOTO_BUCKET).create_signed_url(
+            path=photo_path, expires_in=expires_in
+        )
+        return {"url": result["signedURL"], "expires_in": expires_in}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Photo URL failed: {str(e)}")
