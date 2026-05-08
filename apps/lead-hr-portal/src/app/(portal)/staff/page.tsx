@@ -9,6 +9,7 @@ import { fetchOutlets } from "@/lib/api/outlets";
 import { LoadingState, ErrorState, EmptyState } from "@/components/ui/states";
 import { StatusBadge } from "@/components/ui/status-badge";
 import type { StaffStatus } from "@/lib/types";
+import { Avatar } from "@/components/ui/avatar";
 
 const STATUS_OPTIONS: { value: StaffStatus | "all"; label: string }[] = [
   { value: "all", label: "All statuses" },
@@ -142,17 +143,28 @@ export default function EmployeesPage() {
             <tbody className="divide-y divide-stone-100">
               {staffQuery.data.map((s) => (
                 <tr key={s.id} className="hover:bg-stone-50">
-                  <td className="px-4 py-3">
-                    <Link
-                      href={`/staff/${s.id}`}
-                      className="font-medium text-stone-900 hover:text-amber-700"
-                    >
-                      {s.first_name} {s.last_name}
-                    </Link>
-                    {s.phone && (
-                      <div className="text-xs text-stone-500">{s.phone}</div>
-                    )}
-                  </td>
+                <td className="px-4 py-3">
+                  <div className="flex items-center gap-3">
+                    <Avatar
+                      staffId={s.id}
+                      hasPhoto={!!s.photo_path}
+                      firstName={s.first_name}
+                      lastName={s.last_name}
+                      size="sm"
+                    />
+                    <div>
+                      <Link
+                        href={`/staff/${s.id}`}
+                        className="font-medium text-stone-900 hover:text-amber-700"
+                      >
+                        {s.first_name} {s.last_name}
+                      </Link>
+                      {s.phone && (
+                        <div className="text-xs text-stone-500">{s.phone}</div>
+                      )}
+                    </div>
+                  </div>
+                </td>
                   <td className="px-4 py-3 text-stone-700">
                     {s.roles?.name ?? "—"}
                     {s.roles?.unit && (

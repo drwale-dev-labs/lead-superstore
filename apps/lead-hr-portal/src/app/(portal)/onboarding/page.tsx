@@ -4,19 +4,24 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Check, ArrowRight, UserPlus, Shield, FileSignature } from "lucide-react";
+import { Check, ArrowRight, UserPlus, Shield, FileSignature, Camera } from "lucide-react";
 import { fetchOutlets } from "@/lib/api/outlets";
 import { fetchRoles } from "@/lib/api/roles";
 import { createStaff, activateStaff } from "@/lib/api/staff";
-import { addReference, addGuarantor } from "@/lib/api/verification";
+import {
+  addReference,
+  addGuarantor,
+  uploadStaffPhoto,
+} from "@/lib/api/verification";
 import { LoadingState, ErrorState } from "@/components/ui/states";
 import type { ReferenceType, Staff } from "@/lib/types";
 
-type Stage = "register" | "reference" | "guarantor" | "review";
+type Stage = "register" | "photo" | "reference" | "guarantor" | "review";
 
 export default function OnboardingPage() {
   const [stage, setStage] = useState<Stage>("register");
   const [staff, setStaff] = useState<Staff | null>(null);
+  const [photoDone, setPhotoDone] = useState(false);
   const [refDone, setRefDone] = useState(false);
   const [guarDone, setGuarDone] = useState(false);
   const router = useRouter();
@@ -24,9 +29,10 @@ export default function OnboardingPage() {
 
   const stages: { key: Stage; label: string; icon: typeof UserPlus }[] = [
     { key: "register", label: "Register", icon: UserPlus },
+    { key: "photo", label: "Photo", icon: Camera },
     { key: "reference", label: "Reference", icon: FileSignature },
     { key: "guarantor", label: "Guarantor", icon: Shield },
-    { key: "review", label: "Review & activate", icon: Check },
+    { key: "review", label: "Activate", icon: Check },
   ];
 
   const currentIdx = stages.findIndex((s) => s.key === stage);
@@ -34,23 +40,24 @@ export default function OnboardingPage() {
   return (
     <div className="mx-auto max-w-3xl space-y-6">
       <p className="text-sm text-stone-600">
-        Complete all four steps to onboard and activate a new employee. Reference and
-        guarantor are required before activation.
+        Complete all five steps to onboard and activate a new employee. Photo, reference,
+        and guarantor are required before activation.
       </p>
 
       {/* Stepper */}
-      <div className="flex items-center gap-2 rounded-lg border border-stone-200 bg-white p-3">
+      <div className="flex items-center gap-1.5 rounded-lg border border-stone-200 bg-white p-3">
         {stages.map((s, idx) => {
           const Icon = s.icon;
           const done =
             (s.key === "register" && staff !== null) ||
+            (s.key === "photo" && photoDone) ||
             (s.key === "reference" && refDone) ||
             (s.key === "guarantor" && guarDone);
           const active = idx === currentIdx;
           return (
-            <div key={s.key} className="flex flex-1 items-center gap-2">
+            <div key={s.key} className="flex flex-1 items-center gap-1.5">
               <div
-                className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-semibold ${
+                className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full text-xs font-semibold ${
                   done
                     ? "bg-green-100 text-green-700"
                     : active
@@ -60,18 +67,20 @@ export default function OnboardingPage() {
               >
                 {done ? <Check className="h-4 w-4" /> : <Icon className="h-4 w-4" />}
               </div>
-              <div className="flex-1">
+              <div className="flex-1 min-w-0">
                 <div
-                  className={`text-xs font-medium ${
-                    active ? "text-stone-900" : "text-stone-500"
+                  className={`text-[10px] uppercase tracking-wide ${
+                    active ? "text-stone-700" : "text-stone-400"
                   }`}
                 >
                   Step {idx + 1}
                 </div>
-                <div className="text-[11px] text-stone-500">{s.label}</div>
+                <div className="truncate text-xs font-medium text-stone-600">
+                  {s.label}
+                </div>
               </div>
               {idx < stages.length - 1 && (
-                <ArrowRight className="h-4 w-4 text-stone-300" />
+                <ArrowRight className="h-3.5 w-3.5 flex-shrink-0 text-stone-300" />
               )}
             </div>
           );
@@ -83,8 +92,18 @@ export default function OnboardingPage() {
         <RegisterStage
           onSuccess={(s) => {
             setStaff(s);
-            setStage("reference");
+            setStage("photo");
             qc.invalidateQueries({ queryKey: ["staff"] });
+          }}
+        />
+      )}
+      {stage === "photo" && staff && (
+        <PhotoStage
+          staffId={staff.id}
+          onDone={() => {
+            setPhotoDone(true);
+            setStage("reference");
+            qc.invalidateQueries({ queryKey: ["staff", staff.id] });
           }}
         />
       )}
@@ -178,9 +197,7 @@ function RegisterStage({ onSuccess }: { onSuccess: (s: Staff) => void }) {
                   : "Select…"}
             </option>
             {outletsQuery.data?.map((o) => (
-              <option key={o.id} value={o.id}>
-                {o.name}
-              </option>
+              <option key={o.id} value={o.id}>{o.name}</option>
             ))}
           </select>
         </Field>
@@ -194,9 +211,7 @@ function RegisterStage({ onSuccess }: { onSuccess: (s: Staff) => void }) {
                   : "Select…"}
             </option>
             {rolesQuery.data?.map((r) => (
-              <option key={r.id} value={r.id}>
-                {r.name} ({r.unit})
-              </option>
+              <option key={r.id} value={r.id}>{r.name} ({r.unit})</option>
             ))}
           </select>
         </Field>
@@ -234,7 +249,85 @@ function RegisterStage({ onSuccess }: { onSuccess: (s: Staff) => void }) {
 }
 
 // ============================================================================
-// Stage 2 — Reference
+// Stage 2 — Photo
+// ============================================================================
+
+function PhotoStage({ staffId, onDone }: { staffId: string; onDone: () => void }) {
+  const [preview, setPreview] = useState<string | null>(null);
+  const [file, setFile] = useState<File | null>(null);
+
+  const mutation = useMutation({
+    mutationFn: () => {
+      if (!file) throw new Error("No file selected");
+      return uploadStaffPhoto(staffId, file);
+    },
+    onSuccess: onDone,
+  });
+
+  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const selected = e.target.files?.[0] ?? null;
+    setFile(selected);
+    if (selected) {
+      const reader = new FileReader();
+      reader.onload = () => setPreview(reader.result as string);
+      reader.readAsDataURL(selected);
+    } else {
+      setPreview(null);
+    }
+  }
+
+  return (
+    <div className="rounded-lg border border-stone-200 bg-white p-6 space-y-4">
+      <SectionTitle>Profile photo</SectionTitle>
+      <p className="text-xs text-stone-500">
+        Required. A clear face photo. JPEG, PNG, or WebP — max 2 MB.
+      </p>
+
+      <div className="flex items-start gap-6">
+        {/* Preview */}
+        <div className="flex h-32 w-32 flex-shrink-0 items-center justify-center overflow-hidden rounded-full border border-stone-200 bg-stone-50">
+          {preview ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={preview} alt="Preview" className="h-full w-full object-cover" />
+          ) : (
+            <Camera className="h-10 w-10 text-stone-300" />
+          )}
+        </div>
+
+        {/* Upload control */}
+        <div className="flex-1 space-y-3">
+          <input
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            onChange={handleFileChange}
+            className="block w-full text-sm text-stone-600 file:mr-3 file:rounded-md file:border-0 file:bg-amber-50 file:px-3 file:py-2 file:text-sm file:font-medium file:text-amber-700 hover:file:bg-amber-100"
+          />
+          {file && (
+            <p className="text-xs text-stone-500">
+              Selected: <span className="font-medium text-stone-700">{file.name}</span>{" "}
+              ({(file.size / 1024).toFixed(0)} KB)
+            </p>
+          )}
+        </div>
+      </div>
+
+      {mutation.isError && <ErrorState message={(mutation.error as Error).message} />}
+
+      <div className="flex justify-end pt-2">
+        <button
+          onClick={() => mutation.mutate()}
+          disabled={!file || mutation.isPending}
+          className="rounded-md bg-amber-700 px-5 py-2 text-sm font-medium text-white hover:bg-amber-800 disabled:opacity-50"
+        >
+          {mutation.isPending ? "Uploading…" : "Upload & continue"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================================
+// Stage 3 — Reference
 // ============================================================================
 
 function ReferenceStage({ staffId, onDone }: { staffId: string; onDone: () => void }) {
@@ -290,12 +383,7 @@ function ReferenceStage({ staffId, onDone }: { staffId: string; onDone: () => vo
           <input name="organization" className={inputCls} placeholder="Company / mosque / church name" />
         </Field>
         <Field label="Relationship" required>
-          <input
-            name="relationship"
-            required
-            className={inputCls}
-            placeholder="Former manager at XYZ Stores"
-          />
+          <input name="relationship" required className={inputCls} placeholder="Former manager at XYZ Stores" />
         </Field>
       </div>
 
@@ -328,7 +416,7 @@ function ReferenceStage({ staffId, onDone }: { staffId: string; onDone: () => vo
 }
 
 // ============================================================================
-// Stage 3 — Guarantor
+// Stage 4 — Guarantor
 // ============================================================================
 
 function GuarantorStage({ staffId, onDone }: { staffId: string; onDone: () => void }) {
@@ -396,13 +484,7 @@ function GuarantorStage({ staffId, onDone }: { staffId: string; onDone: () => vo
       </div>
 
       <Field label="Address" required>
-        <textarea
-          name="address"
-          required
-          rows={2}
-          className={inputCls}
-          placeholder="House no., street, area, city, state"
-        />
+        <textarea name="address" required rows={2} className={inputCls} placeholder="House no., street, area, city, state" />
       </Field>
 
       <Field label="Note">
@@ -434,7 +516,7 @@ function GuarantorStage({ staffId, onDone }: { staffId: string; onDone: () => vo
 }
 
 // ============================================================================
-// Stage 4 — Review & activate
+// Stage 5 — Review & activate
 // ============================================================================
 
 function ReviewStage({ staff, onActivated }: { staff: Staff; onActivated: () => void }) {
@@ -453,6 +535,7 @@ function ReviewStage({ staff, onActivated }: { staff: Staff; onActivated: () => 
           Verification complete
         </div>
         <ul className="mt-2 ml-6 list-disc space-y-1 text-green-700">
+          <li>Photo uploaded</li>
           <li>Reference recorded</li>
           <li>Guarantor recorded</li>
         </ul>

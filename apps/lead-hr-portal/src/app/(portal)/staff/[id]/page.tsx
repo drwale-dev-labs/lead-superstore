@@ -13,6 +13,7 @@ import {
 } from "@/lib/api/verification";
 import { LoadingState, ErrorState } from "@/components/ui/states";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { Avatar } from "@/components/ui/avatar";
 
 export default function StaffDetailPage({
   params,
@@ -67,15 +68,24 @@ export default function StaffDetailPage({
       {/* Header */}
       <header className="rounded-lg border border-stone-200 bg-white p-6">
         <div className="flex items-start justify-between gap-4">
-          <div>
-            <h1 className="text-xl font-semibold text-stone-900">
-              {s.first_name} {s.last_name}
-            </h1>
-            <div className="mt-1 flex items-center gap-3 text-sm text-stone-600">
-              <span>{s.roles?.name ?? "—"}</span>
-              <span className="text-stone-300">·</span>
-              <span>{s.outlets?.name ?? "—"}</span>
-              <StatusBadge status={s.status} />
+          <div className="flex items-start gap-5">
+            <Avatar
+              staffId={s.id}
+              hasPhoto={!!s.photo_path}
+              firstName={s.first_name}
+              lastName={s.last_name}
+              size="xl"
+            />
+            <div>
+              <h1 className="text-xl font-semibold text-stone-900">
+                {s.first_name} {s.last_name}
+              </h1>
+              <div className="mt-1 flex items-center gap-3 text-sm text-stone-600">
+                <span>{s.roles?.name ?? "—"}</span>
+                <span className="text-stone-300">·</span>
+                <span>{s.outlets?.name ?? "—"}</span>
+                <StatusBadge status={s.status} />
+              </div>
             </div>
           </div>
 
@@ -94,7 +104,10 @@ export default function StaffDetailPage({
           <Detail label="Phone" value={s.phone ?? "—"} />
           <Detail label="Email" value={s.email ?? "—"} />
           <Detail label="Hired" value={s.hired_at ?? "—"} />
-          <Detail label="Verified" value={s.verified_at ? new Date(s.verified_at).toLocaleDateString() : "—"} />
+          <Detail
+            label="Verified"
+            value={s.verified_at ? new Date(s.verified_at).toLocaleDateString() : "—"}
+          />
         </dl>
       </header>
 

@@ -79,6 +79,7 @@ export const StaffSchema = z.object({
   bank_name: z.string().nullable(),
   bank_account_number: z.string().nullable(),
   bank_account_name: z.string().nullable(),
+  photo_path: z.string().nullable().optional(),
   verified_at: z.string().nullable().optional(),
   created_at: z.string(),
   updated_at: z.string(),

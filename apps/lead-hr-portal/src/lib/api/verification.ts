@@ -114,3 +114,27 @@ export async function getSignedUrl(path: string): Promise<string> {
   });
   return data.url;
 }
+
+// ============================================================================
+// Staff photos
+// ============================================================================
+
+export async function uploadStaffPhoto(
+  staffId: string,
+  photo: File,
+): Promise<{ staff_id: string; photo_path: string }> {
+  const form = new FormData();
+  form.append("photo", photo);
+  const { data } = await apiClient.post(
+    `/api/verification/staff/${staffId}/photo`,
+    form,
+  );
+  return data;
+}
+
+export async function fetchStaffPhotoUrl(staffId: string): Promise<string> {
+  const { data } = await apiClient.get(
+    `/api/verification/staff/${staffId}/photo-url`,
+  );
+  return data.url;
+}
