@@ -10,8 +10,10 @@ export function QueryProvider({ children }: { children: ReactNode }) {
       new QueryClient({
         defaultOptions: {
           queries: {
-            staleTime: 60_000, // 1 minute
+            staleTime: 60_000,
+            gcTime: 5 * 60_000,           // keep cached data for 5 minutes
             refetchOnWindowFocus: false,
+            refetchOnMount: false,         // don't refetch if cache is fresh
             retry: 1,
           },
         },
