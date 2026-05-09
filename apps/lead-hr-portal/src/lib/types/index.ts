@@ -167,3 +167,30 @@ export const VerificationStatusSchema = z.object({
 });
 
 export type VerificationStatus = z.infer<typeof VerificationStatusSchema>;
+
+// ============================================================================
+// Assignments / transfers
+// ============================================================================
+
+export const AssignmentSchema = z.object({
+  id: z.string().uuid(),
+  staff_id: z.string().uuid(),
+  outlet_id: z.string().uuid(),
+  role_id: z.string(),
+  started_at: z.string(),
+  ended_at: z.string().nullable(),
+  transfer_reason: z.string().nullable(),
+  approved_by_name: z.string().nullable(),
+  is_approved: z.boolean(),
+  is_imported: z.boolean(),
+  created_at: z.string(),
+  outlets: z.object({ name: z.string() }).nullable().optional(),
+  roles: z.object({ name: z.string(), unit: z.string() }).nullable().optional(),
+});
+
+export const AssignmentsResponseSchema = z.object({
+  count: z.number(),
+  assignments: z.array(AssignmentSchema),
+});
+
+export type Assignment = z.infer<typeof AssignmentSchema>;

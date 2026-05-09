@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { use } from "react";
+import { use, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, FileText, Shield, AlertTriangle, Check } from "lucide-react";
 import { fetchStaffById, activateStaff } from "@/lib/api/staff";
@@ -14,6 +14,10 @@ import {
 import { LoadingState, ErrorState } from "@/components/ui/states";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { Avatar } from "@/components/ui/avatar";
+import { ArrowRightLeft } from "lucide-react";
+import { TransferModal } from "@/components/staff/transfer-modal";
+import { AssignmentHistory } from "@/components/staff/assignment-history";
+
 
 export default function StaffDetailPage({
   params,
@@ -22,6 +26,7 @@ export default function StaffDetailPage({
 }) {
   const { id } = use(params);
   const qc = useQueryClient();
+  const [transferOpen, setTransferOpen] = useState(false);
 
   const staffQuery = useQuery({
     queryKey: ["staff", id],
@@ -60,6 +65,7 @@ export default function StaffDetailPage({
 
   return (
     <div className="space-y-6">
+      <TransferModal staff={s} open={transferOpen} onClose={() => setTransferOpen(false)} />
       <Link href="/staff" className="inline-flex items-center gap-1.5 text-xs text-stone-500 hover:text-stone-800">
         <ArrowLeft className="h-3.5 w-3.5" />
         All employees
@@ -88,16 +94,27 @@ export default function StaffDetailPage({
               </div>
             </div>
           </div>
-
-          {s.status === "onboarding" && verifQuery.data && (
-            <ActivateButton
-              canActivate={verifQuery.data.can_activate}
-              missing={verifQuery.data.missing}
-              onActivate={() => activateMut.mutate()}
-              pending={activateMut.isPending}
-              error={activateMut.error?.message}
-            />
-          )}
+          
+          <div className="flex flex-col items-end gap-2">
+            {s.status === "onboarding" && verifQuery.data && (
+              <ActivateButton
+                canActivate={verifQuery.data.can_activate}
+                missing={verifQuery.data.missing}
+                onActivate={() => activateMut.mutate()}
+                pending={activateMut.isPending}
+                error={activateMut.error?.message}
+              />
+            )}
+            {s.status === "active" && (
+              <button
+                onClick={() => setTransferOpen(true)}
+                className="inline-flex items-center gap-1.5 rounded-md border border-stone-300 bg-white px-4 py-2 text-sm font-medium text-stone-700 hover:bg-stone-50"
+              >
+                <ArrowRightLeft className="h-4 w-4" />
+                Transfer
+              </button>
+            )}
+          </div>
         </div>
 
         <dl className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-4 text-sm">
@@ -125,6 +142,15 @@ export default function StaffDetailPage({
         ) : (
           <p className="text-xs text-stone-500">No bank details on file.</p>
         )}
+      </section>
+
+      {/* Assignment history */}
+      <section className="rounded-lg border border-stone-200 bg-white p-6">
+        <h2 className="mb-4 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-stone-500">
+          <ArrowRightLeft className="h-3.5 w-3.5" />
+          Assignment history
+        </h2>
+        <AssignmentHistory staffId={s.id} />
       </section>
 
       {/* References */}
