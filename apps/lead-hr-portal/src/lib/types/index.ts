@@ -224,3 +224,47 @@ export const JobPostingsResponseSchema = z.object({
 
 export type JobPosting = z.infer<typeof JobPostingSchema>;
 export type JobStatus = z.infer<typeof JobStatusEnum>;
+
+// ============================================================================
+// Applications
+// ============================================================================
+
+export const ApplicationStatusEnum = z.enum([
+  "new",
+  "reviewing",
+  "shortlisted",
+  "interviewed",
+  "rejected",
+  "hired",
+]);
+
+export const ApplicationSchema = z.object({
+  id: z.string().uuid(),
+  job_posting_id: z.string().uuid(),
+  first_name: z.string(),
+  last_name: z.string(),
+  email: z.string(),
+  phone: z.string(),
+  resume_url: z.string().nullable(),
+  cover_letter: z.string().nullable(),
+  status: ApplicationStatusEnum,
+  notes: z.string().nullable(),
+  applied_at: z.string(),
+  // Joined when listing
+  job_postings: z
+    .object({
+      title: z.string(),
+      outlet_id: z.string().uuid().nullable(),
+      outlets: z.object({ name: z.string() }).nullable().optional(),
+    })
+    .nullable()
+    .optional(),
+});
+
+export const ApplicationsResponseSchema = z.object({
+  count: z.number(),
+  applications: z.array(ApplicationSchema),
+});
+
+export type Application = z.infer<typeof ApplicationSchema>;
+export type ApplicationStatus = z.infer<typeof ApplicationStatusEnum>;
