@@ -194,3 +194,33 @@ export const AssignmentsResponseSchema = z.object({
 });
 
 export type Assignment = z.infer<typeof AssignmentSchema>;
+
+// ============================================================================
+// Jobs
+// ============================================================================
+
+export const JobStatusEnum = z.enum(["draft", "published", "closed"]);
+
+export const JobPostingSchema = z.object({
+  id: z.string().uuid(),
+  role_id: z.string().nullable(),
+  outlet_id: z.string().uuid().nullable(),
+  title: z.string(),
+  description: z.string().nullable(),
+  requirements: z.array(z.string()).nullable(),
+  employment_type: z.string(),
+  status: JobStatusEnum,
+  published_at: z.string().nullable(),
+  closes_at: z.string().nullable(),
+  created_at: z.string(),
+  outlets: z.object({ name: z.string(), city: z.string().nullable() }).nullable().optional(),
+  roles: z.object({ name: z.string(), unit: z.string() }).nullable().optional(),
+});
+
+export const JobPostingsResponseSchema = z.object({
+  count: z.number(),
+  jobs: z.array(JobPostingSchema),
+});
+
+export type JobPosting = z.infer<typeof JobPostingSchema>;
+export type JobStatus = z.infer<typeof JobStatusEnum>;

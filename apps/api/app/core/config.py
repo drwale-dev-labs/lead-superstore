@@ -6,7 +6,9 @@ class Settings(BaseSettings):
 
     SUPABASE_URL: str
     SUPABASE_SERVICE_KEY: str
+    ANTHROPIC_API_KEY: str | None = None  
     ENVIRONMENT: str = "development"
 
 
 settings = Settings()
+

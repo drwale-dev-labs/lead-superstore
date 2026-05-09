@@ -4,6 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
 from app.core.errors import register_error_handlers
 from app.routers import (
+    ai_tools,
     applications,
     deductions,
     jobs,
@@ -30,6 +31,7 @@ TAGS_METADATA = [
     {"name": "Products", "description": "Public — product catalog. Consumed by e-commerce."},
     {"name": "Verification", "description": "HR — staff references, guarantors, and document uploads."},
     {"name": "Transfers", "description": "HR — staff transfers between outlets and roles, with assignment history."},
+    {"name": "AI Tools", "description": "HR — Claude-powered content generation: job ads, aptitude tests, interview questions."},
 ]
 
 
@@ -68,6 +70,7 @@ app.include_router(verification.router, prefix="/api/verification", tags=["Verif
 app.include_router(transfers.router, prefix="/api/transfers", tags=["Transfers"])
 app.include_router(payroll.router, prefix="/api/payroll", tags=["Payroll"])
 app.include_router(deductions.router, prefix="/api/deductions", tags=["Deductions"])
+app.include_router(ai_tools.router, prefix="/api/ai", tags=["AI Tools"])
 
 # Job postings: HR-side admin endpoints
 app.include_router(jobs.admin_router, prefix="/api/jobs", tags=["Jobs (HR)"])
