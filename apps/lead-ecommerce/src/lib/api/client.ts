@@ -8,19 +8,15 @@ export const apiClient = axios.create({
   timeout: 30000,
 });
 
-// Request interceptor — sets JSON content-type only when the body isn't FormData,
-// so multipart uploads get the correct browser-generated boundary header.
-// Auth bearer token will go here once we wire up Supabase Auth.
 apiClient.interceptors.request.use((config) => {
+  // Set JSON content-type only if we're not sending FormData.
+  // FormData needs the browser to set its own multipart boundary.
   if (!(config.data instanceof FormData)) {
     config.headers["Content-Type"] = "application/json";
   }
   return config;
 });
 
-// Response interceptor — surfaces backend errors as readable Error messages.
-// Handles FastAPI's three error shapes: string detail (our handlers),
-// array detail (422 validation errors), and unknown structured payloads.
 apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
@@ -28,8 +24,10 @@ apiClient.interceptors.response.use(
     let message: string;
 
     if (typeof detail === "string") {
+      // Most of our handlers raise HTTPException(detail="...") — string detail.
       message = detail;
     } else if (Array.isArray(detail)) {
+      // FastAPI 422: array of {loc, msg, type, ...}. Surface field + reason.
       message = detail
         .map((d: { msg?: string; loc?: (string | number)[] }) => {
           const field = d.loc?.slice(-1)[0] ?? "field";
@@ -37,6 +35,7 @@ apiClient.interceptors.response.use(
         })
         .join("; ");
     } else if (detail) {
+      // Unknown structured error — stringify so we don't render [object Object].
       message = JSON.stringify(detail);
     } else {
       message = error.message ?? "An unexpected error occurred";
