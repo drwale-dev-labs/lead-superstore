@@ -181,6 +181,9 @@ def get_public_job(job_id: UUID):
     )
 
     if not response.data:
-        raise HTTPException(status_code=404, detail="Job posting not found or no longer accepting applications")
+        raise HTTPException(
+            status_code=404,
+            detail="Job posting not found or no longer accepting applications",
+        )
 
     return response.data

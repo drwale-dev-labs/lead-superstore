@@ -82,3 +82,46 @@ export async function generateJobAd(
   const { data } = await apiClient.post("/api/ai/generate-job-ad", payload);
   return data;
 }
+
+// Aptitude test generator
+export type GenerateTestPayload = {
+  role_id: string;
+  num_questions?: number;
+};
+
+export type GenerateTestResponse = {
+  test: string;
+  role_name: string;
+  unit: string;
+};
+
+export async function generateAptitudeTest(
+  payload: GenerateTestPayload,
+): Promise<GenerateTestResponse> {
+  const { data } = await apiClient.post(
+    "/api/ai/generate-aptitude-test",
+    payload,
+  );
+  return data;
+}
+
+// Interview questions generator
+export type GenerateInterviewPayload = {
+  role_id: string;
+};
+
+export type GenerateInterviewResponse = {
+  questions: string;
+  role_name: string;
+  unit: string;
+};
+
+export async function generateInterviewQuestions(
+  payload: GenerateInterviewPayload,
+): Promise<GenerateInterviewResponse> {
+  const { data } = await apiClient.post(
+    "/api/ai/generate-interview-questions",
+    payload,
+  );
+  return data;
+}
