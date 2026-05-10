@@ -268,3 +268,93 @@ export const ApplicationsResponseSchema = z.object({
 
 export type Application = z.infer<typeof ApplicationSchema>;
 export type ApplicationStatus = z.infer<typeof ApplicationStatusEnum>;
+
+// ============================================================================
+// Payroll
+// ============================================================================
+
+export const PayrollStatusEnum = z.enum(["draft", "approved", "paid"]);
+
+export const PayrollPeriodSchema = z.object({
+  id: z.string().uuid(),
+  outlet_id: z.string().uuid(),
+  period_start: z.string(),
+  period_end: z.string(),
+  status: PayrollStatusEnum,
+  total_gross: z.number(),
+  total_net: z.number(),
+  approved_at: z.string().nullable(),
+  approved_by: z.string().uuid().nullable(),
+  notes: z.string().nullable(),
+  created_at: z.string(),
+  outlets: z.object({ name: z.string() }).nullable().optional(),
+});
+
+export const PayrollPeriodsResponseSchema = z.object({
+  count: z.number(),
+  periods: z.array(PayrollPeriodSchema),
+});
+
+export type PayrollPeriod = z.infer<typeof PayrollPeriodSchema>;
+export type PayrollStatus = z.infer<typeof PayrollStatusEnum>;
+
+export const PayrollEntrySchema = z.object({
+  id: z.string().uuid(),
+  period_id: z.string().uuid(),
+  staff_id: z.string().uuid(),
+  gross_salary: z.number(),
+  working_days: z.number(),
+  deductions: z.number(),
+  net_pay: z.number(),
+  bank_name: z.string().nullable(),
+  bank_account_number: z.string().nullable(),
+  bank_account_name: z.string().nullable(),
+  payment_status: z.string(),
+  notes: z.string().nullable(),
+  created_at: z.string(),
+  staff: z
+    .object({
+      first_name: z.string(),
+      last_name: z.string(),
+      role_id: z.string().nullable(),
+      roles: z.object({ name: z.string() }).nullable().optional(),
+    })
+    .nullable()
+    .optional(),
+});
+
+export const PeriodDetailSchema = z.object({
+  period: PayrollPeriodSchema,
+  entries: z.array(PayrollEntrySchema),
+});
+
+export type PayrollEntry = z.infer<typeof PayrollEntrySchema>;
+export type PeriodDetail = z.infer<typeof PeriodDetailSchema>;
+
+export const EntryDeductionSchema = z.object({
+  id: z.string().uuid(),
+  entry_id: z.string().uuid(),
+  source_type: z.enum(["loan", "advance", "fine"]),
+  source_id: z.string().uuid(),
+  amount: z.number(),
+  description: z.string().nullable(),
+});
+
+export const EntryDeductionsResponseSchema = z.object({
+  count: z.number(),
+  items: z.array(EntryDeductionSchema),
+});
+
+export type EntryDeduction = z.infer<typeof EntryDeductionSchema>;
+
+// ============================================================================
+// Helpers
+// ============================================================================
+
+export function formatNaira(amount: number): string {
+  return new Intl.NumberFormat("en-NG", {
+    style: "currency",
+    currency: "NGN",
+    maximumFractionDigits: 0,
+  }).format(amount);
+}
