@@ -358,3 +358,73 @@ export function formatNaira(amount: number): string {
     maximumFractionDigits: 0,
   }).format(amount);
 }
+
+// ============================================================================
+// Deductions: loans, advances, fines
+// ============================================================================
+
+const StaffMiniSchema = z
+  .object({
+    first_name: z.string(),
+    last_name: z.string(),
+  })
+  .nullable()
+  .optional();
+
+export const LoanSchema = z.object({
+  id: z.string().uuid(),
+  staff_id: z.string().uuid(),
+  principal: z.number(),
+  balance: z.number(),
+  monthly_installment: z.number(),
+  status: z.enum(["active", "paid_off", "cancelled"]),
+  reason: z.string().nullable(),
+  approved_at: z.string().nullable(),
+  created_at: z.string(),
+  staff: StaffMiniSchema,
+});
+
+export const LoansResponseSchema = z.object({
+  count: z.number(),
+  loans: z.array(LoanSchema),
+});
+
+export type Loan = z.infer<typeof LoanSchema>;
+
+export const AdvanceSchema = z.object({
+  id: z.string().uuid(),
+  staff_id: z.string().uuid(),
+  amount: z.number(),
+  reason: z.string().nullable(),
+  status: z.enum(["pending", "applied", "cancelled"]),
+  approved_at: z.string().nullable(),
+  applied_to_period_id: z.string().uuid().nullable(),
+  created_at: z.string(),
+  staff: StaffMiniSchema,
+});
+
+export const AdvancesResponseSchema = z.object({
+  count: z.number(),
+  advances: z.array(AdvanceSchema),
+});
+
+export type Advance = z.infer<typeof AdvanceSchema>;
+
+export const FineSchema = z.object({
+  id: z.string().uuid(),
+  staff_id: z.string().uuid(),
+  amount: z.number(),
+  reason: z.string(),
+  status: z.enum(["pending", "approved", "applied", "cancelled"]),
+  approved_at: z.string().nullable(),
+  applied_to_period_id: z.string().uuid().nullable(),
+  created_at: z.string(),
+  staff: StaffMiniSchema,
+});
+
+export const FinesResponseSchema = z.object({
+  count: z.number(),
+  fines: z.array(FineSchema),
+});
+
+export type Fine = z.infer<typeof FineSchema>;
