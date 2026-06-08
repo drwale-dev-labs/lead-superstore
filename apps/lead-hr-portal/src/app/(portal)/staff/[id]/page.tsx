@@ -17,6 +17,7 @@ import { Avatar } from "@/components/ui/avatar";
 import { ArrowRightLeft } from "lucide-react";
 import { TransferModal } from "@/components/staff/transfer-modal";
 import { AssignmentHistory } from "@/components/staff/assignment-history";
+import { SalarySection } from "@/components/staff/salary-section";
 
 
 export default function StaffDetailPage({
@@ -127,6 +128,15 @@ export default function StaffDetailPage({
           />
         </dl>
       </header>
+
+      {/* Salary */}
+      <section className="rounded-lg border border-stone-200 bg-white p-6">
+        <h2 className="mb-4 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-stone-500">
+          <ArrowRightLeft className="h-3.5 w-3.5" />
+          Salary
+        </h2>
+        <SalarySection staffId={s.id} />
+      </section>
 
       {/* Bank */}
       <section className="rounded-lg border border-stone-200 bg-white p-6">

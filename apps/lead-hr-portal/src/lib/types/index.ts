@@ -428,3 +428,31 @@ export const FinesResponseSchema = z.object({
 });
 
 export type Fine = z.infer<typeof FineSchema>;
+
+// ============================================================================
+// Salary structures
+// ============================================================================
+
+export const SalaryStructureSchema = z.object({
+  id: z.string().uuid(),
+  staff_id: z.string().uuid(),
+  gross_salary: z.number(),
+  effective_from: z.string(),
+  effective_to: z.string().nullable(),
+  notes: z.string().nullable(),
+  created_at: z.string(),
+  staff: z
+    .object({
+      first_name: z.string(),
+      last_name: z.string(),
+    })
+    .nullable()
+    .optional(),
+});
+
+export const SalaryStructuresResponseSchema = z.object({
+  count: z.number(),
+  salary_structures: z.array(SalaryStructureSchema),
+});
+
+export type SalaryStructure = z.infer<typeof SalaryStructureSchema>;
