@@ -7,6 +7,7 @@ import { ArrowRight, Store, Sparkles, MapPin } from "lucide-react";
 import { fetchProducts, fetchCategories } from "@/lib/api/shop";
 import { useOutlet } from "@/lib/outlet-context";
 import { OutletSelectorModal } from "@/components/shop/outlet-selector";
+import { ProductCard } from "@/components/shop/product-card";
 import { formatNaira } from "@/lib/types";
 import type { Unit } from "@/lib/types";
 
@@ -118,44 +119,7 @@ export default function ShopHomePage() {
         {featuredQuery.data && featuredQuery.data.length > 0 && (
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
             {featuredQuery.data.map((p) => (
-              <Link
-                key={p.id}
-                href={`/shop/products/${p.slug}`}
-                className="group rounded-lg border border-stone-200 bg-white p-4 transition-colors hover:border-amber-300"
-              >
-                <div className="aspect-square overflow-hidden rounded-md bg-stone-100">
-                  {p.image_url ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={p.image_url}
-                      alt={p.name}
-                      className="h-full w-full object-cover"
-                    />
-                  ) : (
-                    <div className="flex h-full w-full items-center justify-center text-xs text-stone-400">
-                      No image
-                    </div>
-                  )}
-                </div>
-                <div className="mt-3">
-                  <div className="text-[10px] uppercase tracking-wider text-stone-500">
-                    {p.product_categories?.name ?? p.category_id}
-                  </div>
-                  <div className="mt-0.5 line-clamp-2 text-sm font-medium text-stone-900 group-hover:text-amber-700">
-                    {p.name}
-                  </div>
-                  <div className="mt-1.5 flex items-center justify-between">
-                    <span className="text-sm font-semibold text-stone-900">
-                      {formatNaira(Number(p.price))}
-                    </span>
-                    {p.is_restaurant_item && (
-                      <span className="rounded-full bg-orange-100 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-orange-800">
-                        Restaurant
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </Link>
+              <ProductCard key={p.id} product={p} />
             ))}
           </div>
         )}
