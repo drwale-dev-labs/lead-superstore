@@ -9,6 +9,7 @@ import { StockAvailability } from "@/components/shop/stock-availability";
 import { useOutlet } from "@/lib/outlet-context";
 import { buildWhatsAppOrderLink } from "@/lib/whatsapp";
 import { formatNaira } from "@/lib/types";
+import { useCart } from "@/lib/cart-context";
 
 export default function ProductDetailPage({
   params,
@@ -50,6 +51,8 @@ export default function ProductDetailPage({
   const product = productQuery.data;
   const unit = product.product_categories?.unit;
   const unitSlug = unit?.toLowerCase();
+  const { addItem, outletId: cartOutletId } = useCart();
+  const [added, setAdded] = useState(false);
 
   const selectedOutletStock = stockQuery.data?.stock.find(
     (s) => s.outlet_id === outlet?.id,
@@ -158,23 +161,32 @@ export default function ProductDetailPage({
                     <Plus className="h-4 w-4" />
                   </button>
                 </div>
-
-                <button
-                  disabled={!canAddToCart}
-                  className="inline-flex flex-1 items-center justify-center gap-2 rounded-md bg-amber-700 px-5 py-2.5 text-sm font-medium text-white hover:bg-amber-800 disabled:cursor-not-allowed disabled:bg-stone-300"
-                >
-                  <ShoppingCart className="h-4 w-4" />
-                  {!outlet
-                    ? "Choose an outlet first"
-                    : !selectedOutletStock || selectedOutletStock.quantity === 0
-                      ? "Out of stock at your outlet"
-                      : "Add to cart"}
-                </button>
+                  <button
+                    onClick={() => {
+                      if (!canAddToCart || !outlet) return;
+                      addItem(product, quantity, outlet.id);
+                      setAdded(true);
+                      setTimeout(() => setAdded(false), 2000);
+                    }}
+                    disabled={!canAddToCart}
+                    className="inline-flex flex-1 items-center justify-center gap-2 rounded-md bg-amber-700 px-5 py-2.5 text-sm font-medium text-white hover:bg-amber-800 disabled:cursor-not-allowed disabled:bg-stone-300"
+                  >
+                    <ShoppingCart className="h-4 w-4" />
+                    {!outlet
+                      ? "Choose an outlet first"
+                      : !selectedOutletStock || selectedOutletStock.quantity === 0
+                        ? "Out of stock at your outlet"
+                        : added
+                          ? "Added ✓"
+                          : "Add to cart"}
+                  </button>
               </div>
-              <p className="mt-2 text-[11px] text-stone-500">
-                Cart functionality is coming in the next step — this button is wired
-                up but not yet functional.
+              {cartOutletId && outlet && cartOutletId !== outlet.id && (
+              <p className="mt-2 text-[11px] text-orange-600">
+                Your cart has items from a different outlet. Adding this will start a new
+                cart for {outlet.name}.
               </p>
+              )}
             </>
           )}
         </div>

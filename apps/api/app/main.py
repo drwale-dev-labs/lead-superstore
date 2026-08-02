@@ -8,6 +8,7 @@ from app.routers import (
     applications,
     deductions,
     jobs,
+    orders,
     outlets,
     payroll,
     products,
@@ -32,6 +33,7 @@ TAGS_METADATA = [
     {"name": "Applications (HR)", "description": "HR — review and progress applications."},
     {"name": "Careers (Public)", "description": "Public — careers page and apply form. Consumed by e-commerce."},
     {"name": "Products", "description": "Public — product catalog. Consumed by e-commerce."},
+    {"name": "Orders", "description": "Public — order creation and lookup. Consumed by e-commerce checkout."},
 ]
 
 
@@ -87,3 +89,4 @@ app.include_router(applications.admin_router, prefix="/api/applications", tags=[
 # Public e-commerce
 # ============================================================================
 app.include_router(products.router, prefix="/api/products", tags=["Products"])
+app.include_router(orders.router, prefix="/api/orders", tags=["Orders"])

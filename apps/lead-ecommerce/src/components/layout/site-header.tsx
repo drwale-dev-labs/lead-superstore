@@ -5,10 +5,13 @@ import { useState } from "react";
 import { MapPin, ShoppingBag } from "lucide-react";
 import { useOutlet } from "@/lib/outlet-context";
 import { OutletSelectorModal } from "@/components/shop/outlet-selector";
+import { useCart } from "@/lib/cart-context";
 
 export function SiteHeader() {
   const { outlet } = useOutlet();
+  const { itemCount } = useCart();
   const [selectorOpen, setSelectorOpen] = useState(false);
+
 
   return (
     <>
@@ -37,12 +40,16 @@ export function SiteHeader() {
             <Link href="/careers" className="text-stone-600 hover:text-amber-700">
               Careers
             </Link>
-            <Link
-              href="/cart"
-              className="inline-flex items-center gap-1 text-stone-600 hover:text-amber-700"
+            <Link href="/cart"
+              className="relative inline-flex items-center gap-1 text-stone-600 hover:text-amber-700"
             >
               <ShoppingBag className="h-4 w-4" />
               Cart
+              {itemCount > 0 && (
+                <span className="absolute -right-3 -top-2 flex h-4 min-w-4 items-center justify-center rounded-full bg-amber-700 px-1 text-[9px] font-bold text-white">
+                  {itemCount}
+                </span>
+              )}
             </Link>
           </div>
         </div>
