@@ -6,9 +6,10 @@ class Settings(BaseSettings):
 
     SUPABASE_URL: str
     SUPABASE_SERVICE_KEY: str
-    ANTHROPIC_API_KEY: str | None = None  
+    ANTHROPIC_API_KEY: str | None = None
+    PAYSTACK_SECRET_KEY: str | None = None
+    ECOMMERCE_URL: str = "http://localhost:3001"
     ENVIRONMENT: str = "development"
 
 
 settings = Settings()
-

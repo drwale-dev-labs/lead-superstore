@@ -6,6 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 import { CheckCircle2, MapPin, Truck, Store, Phone } from "lucide-react";
 import { fetchOrder } from "@/lib/api/orders";
 import { formatNaira } from "@/lib/types";
+import { PaymentButton } from "@/components/shop/payment-button";
 
 export default function OrderConfirmationPage({
   params,
@@ -48,6 +49,7 @@ export default function OrderConfirmationPage({
         </p>
       </div>
 
+      {/* Items */}
       <div className="mt-8 rounded-lg border border-stone-200 bg-white p-6">
         <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-stone-500">
           Items
@@ -73,6 +75,20 @@ export default function OrderConfirmationPage({
         )}
       </div>
 
+      {/* Payment */}
+      <div className="mt-4 rounded-lg border border-stone-200 bg-white p-6">
+        {order.status === "pending_payment" ? (
+          <PaymentButton orderId={order.id} />
+        ) : (
+          <div className="flex items-center gap-2 rounded-md border border-green-200 bg-green-50 p-3 text-sm text-green-800">
+            <CheckCircle2 className="h-4 w-4" />
+            Payment received
+            {order.paid_at ? ` — ${new Date(order.paid_at).toLocaleString()}` : ""}
+          </div>
+        )}
+      </div>
+
+      {/* Pickup / delivery details */}
       <div className="mt-4 rounded-lg border border-stone-200 bg-white p-6">
         <h2 className="mb-3 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-stone-500">
           {order.fulfillment_method === "pickup" ? (
@@ -114,13 +130,16 @@ export default function OrderConfirmationPage({
         )}
       </div>
 
+      {/* What happens next */}
       <div className="mt-6 rounded-md border border-blue-200 bg-blue-50 p-4 text-xs text-blue-800">
         <strong>What happens next:</strong> our team at {order.outlets?.name} will
         review your order
         {order.fulfillment_method === "delivery"
           ? " and call you to confirm the delivery fee and schedule."
           : " and text or call you once it's ready for pickup."}{" "}
-        Payment instructions will be shared at that point.
+        {order.status === "pending_payment"
+          ? "Complete payment above to confirm your order."
+          : "Your payment has been received — we'll be in touch shortly."}
       </div>
 
       <div className="mt-6 text-center">

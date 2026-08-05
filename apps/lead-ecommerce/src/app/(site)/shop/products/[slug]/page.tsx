@@ -18,7 +18,9 @@ export default function ProductDetailPage({
 }) {
   const { slug } = use(params);
   const { outlet } = useOutlet();
+  const { addItem, outletId: cartOutletId } = useCart();
   const [quantity, setQuantity] = useState(1);
+  const [added, setAdded] = useState(false);
 
   const productQuery = useQuery({
     queryKey: ["product", slug],
@@ -51,8 +53,6 @@ export default function ProductDetailPage({
   const product = productQuery.data;
   const unit = product.product_categories?.unit;
   const unitSlug = unit?.toLowerCase();
-  const { addItem, outletId: cartOutletId } = useCart();
-  const [added, setAdded] = useState(false);
 
   const selectedOutletStock = stockQuery.data?.stock.find(
     (s) => s.outlet_id === outlet?.id,
@@ -81,7 +81,6 @@ export default function ProductDetailPage({
       </Link>
 
       <div className="mt-6 grid grid-cols-1 gap-8 lg:grid-cols-2">
-        {/* Image */}
         <div className="aspect-square overflow-hidden rounded-lg bg-stone-100">
           {product.image_url ? (
             // eslint-disable-next-line @next/next/no-img-element
@@ -97,7 +96,6 @@ export default function ProductDetailPage({
           )}
         </div>
 
-        {/* Details */}
         <div>
           <div className="text-xs uppercase tracking-wider text-stone-500">
             {product.product_categories?.name ?? product.category_id}
@@ -113,14 +111,12 @@ export default function ProductDetailPage({
             </p>
           )}
 
-          {/* Restaurant item — WhatsApp order */}
           {product.is_restaurant_item ? (
             <div className="mt-6 rounded-lg border border-orange-200 bg-orange-50 p-5">
               <p className="text-sm text-orange-900">
                 This is a made-to-order restaurant item. Order directly via WhatsApp
                 and we&apos;ll confirm details, price, and delivery or pickup with you.
               </p>
-
               <a
                 href={whatsappLink}
                 target="_blank"
@@ -133,12 +129,10 @@ export default function ProductDetailPage({
             </div>
           ) : (
             <>
-              {/* Stock availability */}
               <div className="mt-6">
                 <StockAvailability slug={slug} />
               </div>
 
-              {/* Quantity + add to cart */}
               <div className="mt-6 flex items-center gap-4">
                 <div className="flex items-center rounded-md border border-stone-300">
                   <button
@@ -161,31 +155,31 @@ export default function ProductDetailPage({
                     <Plus className="h-4 w-4" />
                   </button>
                 </div>
-                  <button
-                    onClick={() => {
-                      if (!canAddToCart || !outlet) return;
-                      addItem(product, quantity, outlet.id);
-                      setAdded(true);
-                      setTimeout(() => setAdded(false), 2000);
-                    }}
-                    disabled={!canAddToCart}
-                    className="inline-flex flex-1 items-center justify-center gap-2 rounded-md bg-amber-700 px-5 py-2.5 text-sm font-medium text-white hover:bg-amber-800 disabled:cursor-not-allowed disabled:bg-stone-300"
-                  >
-                    <ShoppingCart className="h-4 w-4" />
-                    {!outlet
-                      ? "Choose an outlet first"
-                      : !selectedOutletStock || selectedOutletStock.quantity === 0
-                        ? "Out of stock at your outlet"
-                        : added
-                          ? "Added ✓"
-                          : "Add to cart"}
-                  </button>
+                <button
+                  onClick={() => {
+                    if (!canAddToCart || !outlet) return;
+                    addItem(product, quantity, outlet.id);
+                    setAdded(true);
+                    setTimeout(() => setAdded(false), 2000);
+                  }}
+                  disabled={!canAddToCart}
+                  className="inline-flex flex-1 items-center justify-center gap-2 rounded-md bg-amber-700 px-5 py-2.5 text-sm font-medium text-white hover:bg-amber-800 disabled:cursor-not-allowed disabled:bg-stone-300"
+                >
+                  <ShoppingCart className="h-4 w-4" />
+                  {!outlet
+                    ? "Choose an outlet first"
+                    : !selectedOutletStock || selectedOutletStock.quantity === 0
+                      ? "Out of stock at your outlet"
+                      : added
+                        ? "Added ✓"
+                        : "Add to cart"}
+                </button>
               </div>
               {cartOutletId && outlet && cartOutletId !== outlet.id && (
-              <p className="mt-2 text-[11px] text-orange-600">
-                Your cart has items from a different outlet. Adding this will start a new
-                cart for {outlet.name}.
-              </p>
+                <p className="mt-2 text-[11px] text-orange-600">
+                  Your cart has items from a different outlet. Adding this will start a
+                  new cart for {outlet.name}.
+                </p>
               )}
             </>
           )}

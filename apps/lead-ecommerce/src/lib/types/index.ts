@@ -104,18 +104,6 @@ export type StockEntry = z.infer<typeof StockEntrySchema>;
 export type ProductStock = z.infer<typeof ProductStockSchema>;
 
 // ============================================================================
-// Helpers
-// ============================================================================
-
-export function formatNaira(amount: number): string {
-  return new Intl.NumberFormat("en-NG", {
-    style: "currency",
-    currency: "NGN",
-    maximumFractionDigits: 0,
-  }).format(amount);
-}
-
-// ============================================================================
 // Orders
 // ============================================================================
 
@@ -139,6 +127,7 @@ export const OrderSchema = z.object({
   delivery_fee: z.number(),
   total: z.number(),
   status: z.string(),
+  paid_at: z.string().nullable().optional(),
   created_at: z.string(),
   outlets: z
     .object({ name: z.string(), city: z.string().nullable(), phone: z.string().nullable() })
@@ -163,3 +152,15 @@ export const OrderDetailSchema = z.object({
 export type OrderItem = z.infer<typeof OrderItemSchema>;
 export type Order = z.infer<typeof OrderSchema>;
 export type OrderDetail = z.infer<typeof OrderDetailSchema>;
+
+// ============================================================================
+// Helpers
+// ============================================================================
+
+export function formatNaira(amount: number): string {
+  return new Intl.NumberFormat("en-NG", {
+    style: "currency",
+    currency: "NGN",
+    maximumFractionDigits: 0,
+  }).format(amount);
+}
