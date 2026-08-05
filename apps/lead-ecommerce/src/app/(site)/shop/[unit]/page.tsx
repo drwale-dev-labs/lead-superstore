@@ -3,10 +3,12 @@
 import Link from "next/link";
 import { use, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, UtensilsCrossed } from "lucide-react";
 import { fetchCategories, fetchProducts } from "@/lib/api/shop";
 import { ProductCard } from "@/components/shop/product-card";
 import type { Unit } from "@/lib/types";
+import { useRestaurantBasket } from "@/lib/restaurant-basket-context";
+import { RestaurantBasketDrawer } from "@/components/shop/restaurant-basket-drawer";
 
 const UNIT_LABELS: Record<string, Unit> = {
   supermarket: "Supermarket",
@@ -28,6 +30,8 @@ export default function UnitPage({
   const { unit: unitSlug } = use(params);
   const unit = UNIT_LABELS[unitSlug.toLowerCase()];
   const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
+  const [basketOpen, setBasketOpen] = useState(false);
+  const { itemCount } = useRestaurantBasket();
 
   const categoriesQuery = useQuery({
     queryKey: ["categories", unit],
@@ -126,6 +130,18 @@ export default function UnitPage({
           </div>
         )}
       </div>
+
+      {unit === "Restaurant" && itemCount > 0 && (
+        <button
+          onClick={() => setBasketOpen(true)}
+          className="fixed bottom-6 right-6 z-40 inline-flex items-center gap-2 rounded-full bg-green-600 px-5 py-3 text-sm font-medium text-white shadow-lg hover:bg-green-700"
+        >
+          <UtensilsCrossed className="h-4 w-4" />
+          View order ({itemCount})
+        </button>
+      )}
+
+      <RestaurantBasketDrawer open={basketOpen} onClose={() => setBasketOpen(false)} />
     </div>
   );
 }

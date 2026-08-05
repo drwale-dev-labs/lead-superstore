@@ -10,6 +10,7 @@ import { useOutlet } from "@/lib/outlet-context";
 import { buildWhatsAppOrderLink } from "@/lib/whatsapp";
 import { formatNaira } from "@/lib/types";
 import { useCart } from "@/lib/cart-context";
+import { useRestaurantBasket } from "@/lib/restaurant-basket-context";
 
 export default function ProductDetailPage({
   params,
@@ -21,7 +22,9 @@ export default function ProductDetailPage({
   const { addItem, outletId: cartOutletId } = useCart();
   const [quantity, setQuantity] = useState(1);
   const [added, setAdded] = useState(false);
-
+  const { addItem: addToRestaurantBasket } = useRestaurantBasket();
+  const [addedToBasket, setAddedToBasket] = useState(false);
+ 
   const productQuery = useQuery({
     queryKey: ["product", slug],
     queryFn: () => fetchProductBySlug(slug),
@@ -110,24 +113,30 @@ export default function ProductDetailPage({
               {product.description}
             </p>
           )}
-
-          {product.is_restaurant_item ? (
-            <div className="mt-6 rounded-lg border border-orange-200 bg-orange-50 p-5">
-              <p className="text-sm text-orange-900">
-                This is a made-to-order restaurant item. Order directly via WhatsApp
-                and we&apos;ll confirm details, price, and delivery or pickup with you.
-              </p>
-              <a
-                href={whatsappLink}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="mt-4 inline-flex items-center gap-2 rounded-md bg-green-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-green-700"
-              >
-                <MessageCircle className="h-4 w-4" />
-                Order on WhatsApp
-              </a>
-            </div>
-          ) : (
+            {product.is_restaurant_item ? (
+              <div className="mt-6 rounded-lg border border-orange-200 bg-orange-50 p-5">
+                <p className="text-sm text-orange-900">
+                  This is a made-to-order dish. Add it to your order — you can pick several
+                  dishes before sending everything to us on WhatsApp in one message.
+                </p>
+                <button
+                  onClick={() => {
+                    if (!outlet) return;
+                    addToRestaurantBasket(product, outlet.id, 1);
+                    setAddedToBasket(true);
+                    setTimeout(() => setAddedToBasket(false), 2000);
+                  }}
+                  disabled={!outlet}
+                  className="mt-4 inline-flex items-center gap-2 rounded-md bg-orange-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-orange-700 disabled:opacity-50"
+                >
+                  <Plus className="h-4 w-4" />
+                  {!outlet ? "Choose an outlet first" : addedToBasket ? "Added ✓" : "Add to order"}
+                </button>
+                <p className="mt-2 text-[11px] text-orange-700">
+                  Use the &quot;Order&quot; button in the header to review and send your full order.
+                </p>
+              </div>
+            ) : (
             <>
               <div className="mt-6">
                 <StockAvailability slug={slug} />

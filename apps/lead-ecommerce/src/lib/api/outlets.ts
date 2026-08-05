@@ -7,6 +7,7 @@ const OutletSchema = z.object({
   city: z.string().nullable(),
   state: z.string().nullable(),
   phone: z.string().nullable(),
+  whatsapp_number: z.string().nullable(),
   is_warehouse: z.boolean(),
   is_active: z.boolean(),
 });

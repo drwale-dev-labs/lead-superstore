@@ -4,13 +4,14 @@ import "./globals.css";
 import { QueryProvider } from "@/components/providers/query-provider";
 import { OutletProvider } from "@/lib/outlet-context";
 import { CartProvider } from "@/lib/cart-context";
+import { RestaurantBasketProvider } from "@/lib/restaurant-basket-context";
 
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: "Lead Superstore",
   description:
-    "Your Osun State's favourite supermarket, bakery, and restaurant. Shop online, find a career.",
+    "Osun State's favourite supermarket, bakery, and restaurant. Shop online, find a career.",
 };
 
 export default function RootLayout({
@@ -21,7 +22,9 @@ export default function RootLayout({
       <body className={inter.className}>
         <QueryProvider>
           <OutletProvider>
-            <CartProvider>{children}</CartProvider>
+            <CartProvider>
+              <RestaurantBasketProvider>{children}</RestaurantBasketProvider>
+            </CartProvider>
           </OutletProvider>
         </QueryProvider>
       </body>

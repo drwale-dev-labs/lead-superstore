@@ -2,16 +2,19 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { MapPin, ShoppingBag } from "lucide-react";
+import { MapPin, ShoppingBag, UtensilsCrossed } from "lucide-react";
 import { useOutlet } from "@/lib/outlet-context";
 import { OutletSelectorModal } from "@/components/shop/outlet-selector";
 import { useCart } from "@/lib/cart-context";
+import { useRestaurantBasket } from "@/lib/restaurant-basket-context";
+import { RestaurantBasketDrawer } from "@/components/shop/restaurant-basket-drawer";
 
 export function SiteHeader() {
   const { outlet } = useOutlet();
   const { itemCount } = useCart();
   const [selectorOpen, setSelectorOpen] = useState(false);
-
+  const [restaurantBasketOpen, setRestaurantBasketOpen] = useState(false);
+  const { itemCount: restaurantItemCount } = useRestaurantBasket();
 
   return (
     <>
@@ -34,13 +37,30 @@ export function SiteHeader() {
               <MapPin className="h-3.5 w-3.5" />
               {outlet ? outlet.name : "Choose outlet"}
             </button>
+
             <Link href="/" className="text-stone-600 hover:text-amber-700">
               Shop
             </Link>
+
             <Link href="/careers" className="text-stone-600 hover:text-amber-700">
               Careers
             </Link>
-            <Link href="/cart"
+
+            {restaurantItemCount > 0 && (
+              <button
+                onClick={() => setRestaurantBasketOpen(true)}
+                className="relative inline-flex items-center gap-1 text-stone-600 hover:text-orange-700"
+              >
+                <UtensilsCrossed className="h-4 w-4" />
+                Order
+                <span className="absolute -right-3 -top-2 flex h-4 min-w-4 items-center justify-center rounded-full bg-orange-600 px-1 text-[9px] font-bold text-white">
+                  {restaurantItemCount}
+                </span>
+              </button>
+            )}
+
+            <Link
+              href="/cart"
               className="relative inline-flex items-center gap-1 text-stone-600 hover:text-amber-700"
             >
               <ShoppingBag className="h-4 w-4" />
@@ -55,9 +75,10 @@ export function SiteHeader() {
         </div>
       </header>
 
-      <OutletSelectorModal
-        open={selectorOpen}
-        onClose={() => setSelectorOpen(false)}
+      <OutletSelectorModal open={selectorOpen} onClose={() => setSelectorOpen(false)} />
+      <RestaurantBasketDrawer
+        open={restaurantBasketOpen}
+        onClose={() => setRestaurantBasketOpen(false)}
       />
     </>
   );
