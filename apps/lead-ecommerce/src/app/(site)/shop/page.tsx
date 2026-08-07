@@ -12,7 +12,7 @@ import { formatNaira } from "@/lib/types";
 import type { Unit } from "@/lib/types";
 
 const UNITS: { value: Unit; label: string; tagline: string }[] = [
-  { value: "Supermarket", label: "Supermarket", tagline: "Groceries, snacks, household essentials" },
+  { value: "Supermarket", label: "Supermarket", tagline: "Beverages, Bread and Snacks, Carbonated Drinks, Wines and Spirits, Groceries, Nigerian Foods, Household essentials, Toileteries, Insecticides and Washes, Diapers, Toys, Perfumes, Cosmetics, Shisha & Tobacco, and Fruits." },
   { value: "Bakery", label: "Bakery", tagline: "Fresh bread, cakes, pastries — baked daily" },
   { value: "Restaurant", label: "Restaurant", tagline: "Home-cooked meals, made to order" },
 ];
@@ -49,7 +49,7 @@ export default function ShopHomePage() {
               Now serving Osogbo &amp; Ilesa
             </p>
             <h1 className="mt-4 text-3xl font-bold text-stone-900 sm:text-4xl">
-              Everything you need, from one trusted store.
+              Everything you need, from one trusted store — We've got it all.
             </h1>
             <p className="mt-3 text-base text-stone-600">
               Lead Superstore brings supermarket, bakery, and restaurant under one roof.

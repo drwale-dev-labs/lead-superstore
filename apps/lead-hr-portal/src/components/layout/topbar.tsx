@@ -16,6 +16,7 @@ const PAGE_TITLES: Record<string, string> = {
   "/deductions": "Deductions",
   "/reports": "Reports",
   "/orders": "Orders",
+  "/products": "Products & stock",
 };
 
 export function Topbar() {

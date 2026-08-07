@@ -17,8 +17,8 @@ const UNIT_LABELS: Record<string, Unit> = {
 };
 
 const UNIT_TAGLINES: Record<Unit, string> = {
-  Supermarket: "Groceries, snacks, and household essentials.",
-  Bakery: "Fresh bread, cakes, and pastries — baked daily.",
+  Supermarket: "Beverages, Bread and Snacks, Carbonated Drinks, Wines and Spirits, Groceries, Nigerian Foods, Household essentials, Toileteries, Insecticides and Washes, Diapers, Toys, Perfumes, Cosmetics, Shisha & Tobacco, and Fruits.", 
+  Bakery: "Lead Superloaf, Whole Wheat Bread, Sardine Bread, Milk Bread, Chocolate Bread, Butter Bread, Animation Bread; Cakes - Big decoration cake, Cake (size 5), Cake (size 4), Cup cake by 5, Madera cake, Chocolate cake, Red velvet cake; and Pastries —Puff puff, Rough burns, Egg burns, Meat pie, Chicken pie, Fish pie, Sausage roll, Super roll, Chicken roll, Fish roll, Samosa, and Doughnuts — baked daily.",
   Restaurant: "Home-cooked meals, made to order and sent via WhatsApp.",
 };
 

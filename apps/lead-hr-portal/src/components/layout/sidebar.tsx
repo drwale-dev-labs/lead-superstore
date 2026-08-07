@@ -16,6 +16,7 @@ import {
   UserPlus,
   BarChart3,
   ShoppingBag,
+  Boxes,
 } from "lucide-react";
 
 type NavItem = {
@@ -51,6 +52,7 @@ const NAV_ITEMS: NavItem[] = [
 
   // E-commerce
   { label: "Orders", href: "/orders", icon: ShoppingBag, group: "E-commerce", badge: "NEW" },
+  { label: "Products & stock", href: "/products", icon: Boxes, group: "E-commerce" },
 ];
 
 const GROUPS = ["Overview", "Recruitment", "People", "Compensation", "E-commerce", "Insights"] as const;

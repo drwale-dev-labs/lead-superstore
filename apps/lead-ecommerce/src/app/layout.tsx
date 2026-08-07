@@ -11,7 +11,7 @@ const inter = Inter({ subsets: ["latin"] });
 export const metadata: Metadata = {
   title: "Lead Superstore",
   description:
-    "Osun State's favourite supermarket, bakery, and restaurant. Shop online, find a career.",
+    "Your Osun State's favourite destination for shopping, fresh bakery treats, delicious meals, and rewarding careers. We've got it all.",
 };
 
 export default function RootLayout({

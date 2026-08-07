@@ -351,13 +351,13 @@ export type EntryDeduction = z.infer<typeof EntryDeductionSchema>;
 // Helpers
 // ============================================================================
 
-export function formatNaira(amount: number): string {
+export const formatNaira = (amount: number): string => {
   return new Intl.NumberFormat("en-NG", {
     style: "currency",
     currency: "NGN",
     maximumFractionDigits: 0,
   }).format(amount);
-}
+};
 
 // ============================================================================
 // Deductions: loans, advances, fines
@@ -527,3 +527,74 @@ export type OrderStatus = z.infer<typeof OrderStatusEnum>;
 export type OrderItem = z.infer<typeof OrderItemSchema>;
 export type Order = z.infer<typeof OrderSchema>;
 export type OrderDetail = z.infer<typeof OrderDetailSchema>;
+
+// ============================================================================
+// Products & stock (e-commerce)
+// ============================================================================
+
+export const AdminProductSchema = z.object({
+  id: z.string().uuid(),
+  sku: z.string().nullable(),
+  name: z.string(),
+  slug: z.string(),
+  category_id: z.string(),
+  description: z.string().nullable(),
+  price: z.number(),
+  is_restaurant_item: z.boolean(),
+  image_url: z.string().nullable(),
+  is_published: z.boolean(),
+  is_featured: z.boolean(),
+  created_at: z.string(),
+  updated_at: z.string(),
+  product_categories: z
+    .object({ name: z.string(), unit: z.enum(["Supermarket", "Bakery", "Restaurant"]) })
+    .nullable()
+    .optional(),
+});
+
+export const AdminProductsResponseSchema = z.object({
+  count: z.number(),
+  products: z.array(AdminProductSchema),
+});
+
+export type AdminProduct = z.infer<typeof AdminProductSchema>;
+
+export const StockRowSchema = z.object({
+  outlet_id: z.string().uuid(),
+  quantity: z.number(),
+  updated_at: z.string().optional(),
+  outlets: z
+    .object({ name: z.string(), city: z.string().nullable(), is_warehouse: z.boolean() })
+    .nullable()
+    .optional(),
+});
+
+export const AdminProductStockSchema = z.object({
+  product_id: z.string().uuid(),
+  is_restaurant_item: z.boolean(),
+  stock: z.array(StockRowSchema),
+});
+
+export type StockRow = z.infer<typeof StockRowSchema>;
+export type AdminProductStock = z.infer<typeof AdminProductStockSchema>;
+
+// ============================================================================
+// Categories (e-commerce)
+// ============================================================================
+
+export const CategorySchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  unit: z.enum(["Supermarket", "Bakery", "Restaurant"]),
+  description: z.string().nullable(),
+  display_order: z.number(),
+  is_active: z.boolean(),
+});
+
+export const CategoriesResponseSchema = z.object({
+  count: z.number(),
+  categories: z.array(CategorySchema),
+});
+
+export type Category = z.infer<typeof CategorySchema>;
+export type Unit = "Supermarket" | "Bakery" | "Restaurant";
