@@ -36,6 +36,8 @@ TAGS_METADATA = [
     {"name": "Products", "description": "Public — product catalog. Consumed by e-commerce."},
     {"name": "Orders", "description": "Public — order creation and lookup. Consumed by e-commerce checkout."},
     {"name": "Payments", "description": "Public — Paystack payment initialization, verification, and webhook."},
+    {"name": "Orders (HR)", "description": "HR — view and progress customer orders (confirm, set delivery fee, mark ready/completed)."},
+    
 ]
 
 
@@ -72,6 +74,8 @@ def health():
 # ============================================================================
 app.include_router(jobs.public_router, prefix="/api/jobs", tags=["Careers (Public)"])
 app.include_router(applications.public_router, prefix="/api/applications", tags=["Careers (Public)"])
+app.include_router(orders.public_router, prefix="/api/orders", tags=["Orders"])
+
 
 # ============================================================================
 # HR-only routers
@@ -86,10 +90,10 @@ app.include_router(deductions.router, prefix="/api/deductions", tags=["Deduction
 app.include_router(ai_tools.router, prefix="/api/ai", tags=["AI Tools"])
 app.include_router(jobs.admin_router, prefix="/api/jobs", tags=["Jobs (HR)"])
 app.include_router(applications.admin_router, prefix="/api/applications", tags=["Applications (HR)"])
+app.include_router(orders.admin_router, prefix="/api/orders/admin", tags=["Orders (HR)"])
 
 # ============================================================================
 # Public e-commerce
 # ============================================================================
 app.include_router(products.router, prefix="/api/products", tags=["Products"])
-app.include_router(orders.router, prefix="/api/orders", tags=["Orders"])
 app.include_router(payments.router, prefix="/api/payments", tags=["Payments"])

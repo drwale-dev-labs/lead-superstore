@@ -32,3 +32,15 @@ class OrderCreate(BaseModel):
         if self.fulfillment_method == "pickup" and self.delivery_address:
             raise ValueError("delivery_address should not be set when fulfillment_method is 'pickup'")
         return self
+
+class OrderAdminUpdate(BaseModel):
+    status: Literal[
+        "confirmed",
+        "ready_for_pickup",
+        "out_for_delivery",
+        "completed",
+        "cancelled",
+        "refunded",
+    ] | None = None
+    delivery_fee: float | None = Field(None, ge=0)
+    staff_notes: str | None = Field(None, max_length=1000)

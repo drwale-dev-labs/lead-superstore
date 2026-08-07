@@ -1,11 +1,16 @@
+from datetime import datetime, timezone
 from uuid import UUID
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, Query, status
 
 from app.core.db import get_supabase
-from app.schemas.orders import OrderCreate
+from app.schemas.orders import OrderAdminUpdate, OrderCreate
 
-router = APIRouter()
+# ============================================================================
+# Public router — checkout + order lookup for the e-commerce app
+# ============================================================================
+
+public_router = APIRouter()
 
 
 def _get_or_create_customer(supabase, info) -> str:
@@ -14,10 +19,7 @@ def _get_or_create_customer(supabase, info) -> str:
     If found, refresh their name/phone in case they changed it since last order.
     """
     existing = (
-        supabase.table("customers")
-        .select("id")
-        .ilike("email", info.email)
-        .execute()
+        supabase.table("customers").select("id").ilike("email", info.email).execute()
     )
     if existing.data:
         customer_id = existing.data[0]["id"]
@@ -45,7 +47,7 @@ def _get_or_create_customer(supabase, info) -> str:
     return inserted.data[0]["id"]
 
 
-@router.post("/", status_code=status.HTTP_201_CREATED)
+@public_router.post("/", status_code=status.HTTP_201_CREATED)
 def create_order(payload: OrderCreate):
     """Create an order. Atomically validates and decrements stock.
 
@@ -54,7 +56,6 @@ def create_order(payload: OrderCreate):
     """
     supabase = get_supabase()
 
-    # Verify outlet exists and is a valid fulfillment outlet
     outlet_check = (
         supabase.table("outlets")
         .select("id, is_active, is_warehouse")
@@ -122,7 +123,7 @@ def create_order(payload: OrderCreate):
     return {"order": order_resp.data, "items": items_resp.data}
 
 
-@router.get("/{order_id}")
+@public_router.get("/{order_id}")
 def get_order(order_id: UUID):
     """Fetch a single order with its items. Used by the confirmation page."""
     supabase = get_supabase()
@@ -137,10 +138,99 @@ def get_order(order_id: UUID):
         raise HTTPException(status_code=404, detail="Order not found")
 
     items_resp = (
-        supabase.table("order_items")
-        .select("*")
-        .eq("order_id", str(order_id))
-        .execute()
+        supabase.table("order_items").select("*").eq("order_id", str(order_id)).execute()
     )
 
     return {"order": order_resp.data[0], "items": items_resp.data}
+
+
+# ============================================================================
+# Admin router — HR portal order management
+# ============================================================================
+
+admin_router = APIRouter()
+
+
+@admin_router.get("/")
+def list_orders(
+    status_filter: str | None = Query(None, alias="status"),
+    outlet_id: UUID | None = Query(None),
+    fulfillment_method: str | None = Query(None),
+):
+    """List orders for HR review, most recent first."""
+    supabase = get_supabase()
+    query = supabase.table("orders").select(
+        "*, outlets(name, city), customers(first_name, last_name, email, phone)"
+    )
+
+    if status_filter:
+        query = query.eq("status", status_filter)
+    if outlet_id:
+        query = query.eq("fulfillment_outlet_id", str(outlet_id))
+    if fulfillment_method:
+        query = query.eq("fulfillment_method", fulfillment_method)
+
+    response = query.order("created_at", desc=True).execute()
+    return {"count": len(response.data), "orders": response.data}
+
+
+@admin_router.get("/{order_id}")
+def get_order_admin(order_id: UUID):
+    """Fetch a single order with items, for the HR order detail page."""
+    supabase = get_supabase()
+
+    order_resp = (
+        supabase.table("orders")
+        .select("*, outlets(name, city, phone), customers(first_name, last_name, email, phone)")
+        .eq("id", str(order_id))
+        .execute()
+    )
+    if not order_resp.data:
+        raise HTTPException(status_code=404, detail="Order not found")
+
+    items_resp = (
+        supabase.table("order_items").select("*").eq("order_id", str(order_id)).execute()
+    )
+
+    return {"order": order_resp.data[0], "items": items_resp.data}
+
+
+@admin_router.patch("/{order_id}")
+def update_order(order_id: UUID, payload: OrderAdminUpdate):
+    """Progress an order: change status, set delivery fee, or add staff notes.
+
+    Setting delivery_fee recomputes total = subtotal + delivery_fee. Only valid
+    for delivery orders.
+    """
+    supabase = get_supabase()
+
+    existing = supabase.table("orders").select("*").eq("id", str(order_id)).execute()
+    if not existing.data:
+        raise HTTPException(status_code=404, detail="Order not found")
+    order = existing.data[0]
+
+    update_data: dict = {}
+
+    if payload.delivery_fee is not None:
+        if order["fulfillment_method"] != "delivery":
+            raise HTTPException(
+                status_code=400, detail="Delivery fee only applies to delivery orders"
+            )
+        update_data["delivery_fee"] = payload.delivery_fee
+        update_data["total"] = float(order["subtotal"]) + payload.delivery_fee
+
+    if payload.status is not None:
+        update_data["status"] = payload.status
+
+    if payload.staff_notes is not None:
+        update_data["staff_notes"] = payload.staff_notes
+
+    if not update_data:
+        raise HTTPException(status_code=400, detail="No fields to update")
+
+    update_data["updated_at"] = datetime.now(timezone.utc).isoformat()
+
+    response = (
+        supabase.table("orders").update(update_data).eq("id", str(order_id)).execute()
+    )
+    return response.data[0]

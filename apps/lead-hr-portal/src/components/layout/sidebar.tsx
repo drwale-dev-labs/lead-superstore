@@ -15,13 +15,14 @@ import {
   MessageSquare,
   UserPlus,
   BarChart3,
+  ShoppingBag,
 } from "lucide-react";
 
 type NavItem = {
   label: string;
   href: string;
   icon: typeof LayoutDashboard;
-  group: "Overview" | "Recruitment" | "People" | "Compensation" | "Insights";
+  group: "Overview" | "Recruitment" | "People" | "Compensation" | "E-commerce" | "Insights";
   badge?: "NEW";
 };
 
@@ -47,9 +48,12 @@ const NAV_ITEMS: NavItem[] = [
 
   // Insights
   { label: "Reports", href: "/reports", icon: BarChart3, group: "Insights" },
+
+  // E-commerce
+  { label: "Orders", href: "/orders", icon: ShoppingBag, group: "E-commerce", badge: "NEW" },
 ];
 
-const GROUPS = ["Overview", "Recruitment", "People", "Compensation", "Insights"] as const;
+const GROUPS = ["Overview", "Recruitment", "People", "Compensation", "E-commerce", "Insights"] as const;
 
 export function Sidebar() {
   const pathname = usePathname();

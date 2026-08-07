@@ -456,3 +456,74 @@ export const SalaryStructuresResponseSchema = z.object({
 });
 
 export type SalaryStructure = z.infer<typeof SalaryStructureSchema>;
+
+// ============================================================================
+// Orders (e-commerce)
+// ============================================================================
+
+export const OrderStatusEnum = z.enum([
+  "pending_payment",
+  "payment_received",
+  "confirmed",
+  "ready_for_pickup",
+  "out_for_delivery",
+  "completed",
+  "cancelled",
+  "refunded",
+]);
+
+export const OrderItemSchema = z.object({
+  id: z.string().uuid(),
+  product_id: z.string().uuid(),
+  product_name: z.string(),
+  unit_price: z.number(),
+  quantity: z.number(),
+  line_total: z.number(),
+});
+
+export const OrderSchema = z.object({
+  id: z.string().uuid(),
+  order_number: z.string(),
+  fulfillment_outlet_id: z.string().uuid(),
+  fulfillment_method: z.enum(["pickup", "delivery"]),
+  delivery_address: z.string().nullable(),
+  delivery_city: z.string().nullable(),
+  delivery_notes: z.string().nullable(),
+  subtotal: z.number(),
+  delivery_fee: z.number(),
+  total: z.number(),
+  status: OrderStatusEnum,
+  payment_reference: z.string().nullable(),
+  paid_at: z.string().nullable(),
+  staff_notes: z.string().nullable(),
+  created_at: z.string(),
+  updated_at: z.string(),
+  outlets: z
+    .object({ name: z.string(), city: z.string().nullable(), phone: z.string().nullable() })
+    .nullable()
+    .optional(),
+  customers: z
+    .object({
+      first_name: z.string(),
+      last_name: z.string(),
+      email: z.string(),
+      phone: z.string(),
+    })
+    .nullable()
+    .optional(),
+});
+
+export const OrdersResponseSchema = z.object({
+  count: z.number(),
+  orders: z.array(OrderSchema),
+});
+
+export const OrderDetailSchema = z.object({
+  order: OrderSchema,
+  items: z.array(OrderItemSchema),
+});
+
+export type OrderStatus = z.infer<typeof OrderStatusEnum>;
+export type OrderItem = z.infer<typeof OrderItemSchema>;
+export type Order = z.infer<typeof OrderSchema>;
+export type OrderDetail = z.infer<typeof OrderDetailSchema>;
