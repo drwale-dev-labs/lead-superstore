@@ -17,6 +17,7 @@ class StaffBase(BaseModel):
     bank_name: str | None = Field(None, max_length=100)
     bank_account_number: str | None = Field(None, min_length=10, max_length=10)
     bank_account_name: str | None = Field(None, max_length=200)
+    bank_sort_code: str | None = Field(None, max_length=20)
     photo_path: str | None = None
 
 

@@ -313,14 +313,15 @@ export const PayrollEntrySchema = z.object({
   notes: z.string().nullable(),
   created_at: z.string(),
   staff: z
-    .object({
-      first_name: z.string(),
-      last_name: z.string(),
-      role_id: z.string().nullable(),
-      roles: z.object({ name: z.string() }).nullable().optional(),
-    })
-    .nullable()
-    .optional(),
+  .object({
+    first_name: z.string(),
+    last_name: z.string(),
+    role_id: z.string().nullable(),
+    bank_sort_code: z.string().nullable().optional(),
+    roles: z.object({ name: z.string() }).nullable().optional(),
+  })
+  .nullable()
+  .optional(),
 });
 
 export const PeriodDetailSchema = z.object({

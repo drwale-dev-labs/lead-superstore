@@ -9,3 +9,7 @@ build/
 *.log
 .DS_Store
 __pycache__/
+
+# CLAUDE code files
+BUGFIX_RUNBOOK.md
+CLAUDE.md

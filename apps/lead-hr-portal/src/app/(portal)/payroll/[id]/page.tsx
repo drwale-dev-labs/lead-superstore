@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { use } from "react";
+import { use, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowLeft,
@@ -12,6 +12,7 @@ import {
   Wallet,
   Users,
   AlertTriangle,
+  Download,
 } from "lucide-react";
 import {
   fetchPeriodDetail,
@@ -21,6 +22,7 @@ import {
 import { LoadingState, ErrorState, EmptyState } from "@/components/ui/states";
 import { PayrollStatusBadge } from "@/components/ui/payroll-status-badge";
 import { formatNaira } from "@/lib/types";
+import { apiClient } from "@/lib/api/client";
 
 export default function PeriodDetailPage({
   params,
@@ -29,6 +31,10 @@ export default function PeriodDetailPage({
 }) {
   const { id } = use(params);
   const qc = useQueryClient();
+
+  const [downloading, setDownloading] = useState(false);
+  const [downloadError, setDownloadError] = useState<string | null>(null);
+  const [missingBankCount, setMissingBankCount] = useState<number | null>(null);
 
   const detailQuery = useQuery({
     queryKey: ["period", id],
@@ -59,6 +65,39 @@ export default function PeriodDetailPage({
   const isDraft = period.status === "draft";
   const hasEntries = entries.length > 0;
   const canApprove = isDraft && hasEntries;
+
+  const entriesMissingBankDetails = entries.filter(
+    (e) => !e.bank_account_number || !e.staff?.bank_sort_code,
+  );
+
+  async function downloadBankSheet() {
+    setDownloading(true);
+    setDownloadError(null);
+    try {
+      const res = await apiClient.get(
+        `/api/payroll/periods/${id}/export-bank-sheet`,
+        { responseType: "blob" },
+      );
+
+      const missingHeader = res.headers["x-missing-bank-details"];
+      setMissingBankCount(missingHeader ? parseInt(missingHeader, 10) : 0);
+
+      const disposition: string | undefined = res.headers["content-disposition"];
+      const match = disposition?.match(/filename="([^"]+)"/);
+      const filename = match?.[1] ?? `salary_${period.outlets?.name ?? "outlet"}.xlsx`;
+
+      const url = URL.createObjectURL(res.data);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      setDownloadError((err as Error).message);
+    } finally {
+      setDownloading(false);
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -103,11 +142,7 @@ export default function PeriodDetailPage({
 
         {/* Stats */}
         <div className="mt-6 grid grid-cols-3 gap-4 border-t border-stone-100 pt-4 text-sm">
-          <Stat
-            icon={Users}
-            label="Entries"
-            value={entries.length.toString()}
-          />
+          <Stat icon={Users} label="Entries" value={entries.length.toString()} />
           <Stat
             icon={Wallet}
             label="Total gross"
@@ -128,9 +163,7 @@ export default function PeriodDetailPage({
           <div className="flex items-start justify-between gap-4">
             <div className="min-w-0">
               <div className="text-sm font-medium text-amber-900">
-                {hasEntries
-                  ? "Review entries, then approve"
-                  : "Generate entries to begin"}
+                {hasEntries ? "Review entries, then approve" : "Generate entries to begin"}
               </div>
               <p className="mt-1 text-xs text-amber-800">
                 {hasEntries
@@ -218,6 +251,35 @@ export default function PeriodDetailPage({
         </div>
       )}
 
+      {/* Missing bank details warning */}
+      {entriesMissingBankDetails.length > 0 && (
+        <div className="rounded-lg border border-red-200 bg-red-50 p-4">
+          <div className="flex items-start gap-2">
+            <AlertTriangle className="mt-0.5 h-4 w-4 flex-shrink-0 text-red-700" />
+            <div className="min-w-0">
+              <div className="text-sm font-medium text-red-900">
+                {entriesMissingBankDetails.length} staff missing bank account number
+                or sort code
+              </div>
+              <p className="mt-1 text-xs text-red-800">
+                These employees will export with blank fields in the bank sheet.
+                Update their bank details from their staff profile before payment.
+              </p>
+              <ul className="mt-2 space-y-0.5 text-xs text-red-700">
+                {entriesMissingBankDetails.map((e) => (
+                  <li key={e.id}>
+                    •{" "}
+                    <Link href={`/staff/${e.staff_id}`} className="underline">
+                      {e.staff?.first_name} {e.staff?.last_name}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Entries table */}
       {!hasEntries ? (
         <EmptyState
@@ -241,47 +303,56 @@ export default function PeriodDetailPage({
               </tr>
             </thead>
             <tbody className="divide-y divide-stone-100">
-              {entries.map((entry) => (
-                <tr key={entry.id} className="hover:bg-stone-50">
-                  <td className="px-4 py-3">
-                    <Link
-                      href={
-                        isDraft
-                          ? `/payroll/${id}/entries/${entry.id}`
-                          : `/staff/${entry.staff_id}`
-                      }
-                      className="font-medium text-stone-900 hover:text-amber-700"
-                    >
-                      {entry.staff?.first_name} {entry.staff?.last_name}
-                    </Link>
-                    {entry.staff?.roles?.name && (
-                      <div className="text-xs text-stone-500">
-                        {entry.staff.roles.name}
-                      </div>
-                    )}
-                  </td>
-                  <td className="px-4 py-3 text-right text-stone-700">
-                    {formatNaira(Number(entry.gross_salary))}
-                  </td>
-                  <td className="px-4 py-3 text-right text-stone-700">
-                    {entry.working_days}
-                  </td>
-                  <td className="px-4 py-3 text-right text-stone-700">
-                    {Number(entry.deductions) > 0 ? (
-                      <span className="text-red-700">
-                        − {formatNaira(Number(entry.deductions))}
+              {entries.map((entry) => {
+                const missingBank = !entry.bank_account_number || !entry.staff?.bank_sort_code;
+                return (
+                  <tr key={entry.id} className="hover:bg-stone-50">
+                    <td className="px-4 py-3">
+                      <Link
+                        href={
+                          isDraft
+                            ? `/payroll/${id}/entries/${entry.id}`
+                            : `/staff/${entry.staff_id}`
+                        }
+                        className="inline-flex items-center gap-1.5 font-medium text-stone-900 hover:text-amber-700"
+                      >
+                        {missingBank && (
+                          <AlertTriangle
+                            className="h-3 w-3 text-red-600"
+                            aria-label="Missing bank details"
+                          />
+                        )}
+                        {entry.staff?.first_name} {entry.staff?.last_name}
+                      </Link>
+                      {entry.staff?.roles?.name && (
+                        <div className="text-xs text-stone-500">
+                          {entry.staff.roles.name}
+                        </div>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-right text-stone-700">
+                      {formatNaira(Number(entry.gross_salary))}
+                    </td>
+                    <td className="px-4 py-3 text-right text-stone-700">
+                      {entry.working_days}
+                    </td>
+                    <td className="px-4 py-3 text-right text-stone-700">
+                      {Number(entry.deductions) > 0 ? (
+                        <span className="text-red-700">
+                          − {formatNaira(Number(entry.deductions))}
+                        </span>
+                      ) : (
+                        <span className="text-stone-400">—</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      <span className="font-semibold text-stone-900">
+                        {formatNaira(Number(entry.net_pay))}
                       </span>
-                    ) : (
-                      <span className="text-stone-400">—</span>
-                    )}
-                  </td>
-                  <td className="px-4 py-3 text-right">
-                    <span className="font-semibold text-stone-900">
-                      {formatNaira(Number(entry.net_pay))}
-                    </span>
-                  </td>
-                </tr>
-              ))}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
             <tfoot className="border-t border-stone-200 bg-stone-50 text-xs">
               <tr>
@@ -301,6 +372,31 @@ export default function PeriodDetailPage({
               </tr>
             </tfoot>
           </table>
+        </div>
+      )}
+
+      {/* Download bank sheet */}
+      {!isDraft && (
+        <div className="space-y-2">
+          <div className="flex justify-end">
+            <button
+              onClick={downloadBankSheet}
+              disabled={downloading}
+              className="inline-flex items-center gap-1.5 rounded-md border border-stone-300 bg-white px-3 py-2 text-xs font-medium text-stone-700 hover:bg-stone-50 disabled:opacity-50"
+            >
+              <Download className="h-3.5 w-3.5" />
+              {downloading ? "Preparing…" : "Download bank payment sheet"}
+            </button>
+          </div>
+          {downloadError && (
+            <p className="text-right text-xs text-red-600">{downloadError}</p>
+          )}
+          {missingBankCount !== null && missingBankCount > 0 && (
+            <p className="text-right text-xs text-orange-600">
+              {missingBankCount} row(s) in the downloaded file have blank account
+              number or sort code — fix these before submitting to the bank.
+            </p>
+          )}
         </div>
       )}
 

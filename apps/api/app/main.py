@@ -13,6 +13,7 @@ from app.routers import (
     payments,
     payroll,
     products,
+    reports,
     roles,
     staff,
     transfers,
@@ -37,7 +38,7 @@ TAGS_METADATA = [
     {"name": "Orders", "description": "Public — order creation and lookup. Consumed by e-commerce checkout."},
     {"name": "Payments", "description": "Public — Paystack payment initialization, verification, and webhook."},
     {"name": "Orders (HR)", "description": "HR — view and progress customer orders (confirm, set delivery fee, mark ready/completed)."},
-    
+    {"name": "Reports", "description": "HR — headcount, hiring funnel, payroll, turnover, sales."},
 ]
 
 
@@ -91,6 +92,7 @@ app.include_router(ai_tools.router, prefix="/api/ai", tags=["AI Tools"])
 app.include_router(jobs.admin_router, prefix="/api/jobs", tags=["Jobs (HR)"])
 app.include_router(applications.admin_router, prefix="/api/applications", tags=["Applications (HR)"])
 app.include_router(orders.admin_router, prefix="/api/orders/admin", tags=["Orders (HR)"])
+app.include_router(reports.router, prefix="/api/reports", tags=["Reports"])
 
 # ============================================================================
 # Public e-commerce

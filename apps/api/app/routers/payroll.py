@@ -2,8 +2,13 @@ from collections import defaultdict
 from datetime import date, datetime, timezone
 from decimal import Decimal
 from uuid import UUID
+from io import BytesIO
+from openpyxl import Workbook
+from openpyxl.styles import Font
+from datetime import date
 
 from fastapi import APIRouter, HTTPException, Query, status
+from fastapi.responses import StreamingResponse
 
 from app.core.db import get_supabase
 from app.schemas.payroll import (
@@ -97,11 +102,13 @@ def get_payroll_period(period_id: UUID):
         raise HTTPException(status_code=404, detail="Payroll period not found")
 
     entries = (
-        supabase.table("payroll_entries")
-        .select("*, staff(first_name, last_name, role_id, roles(name))")
-        .eq("period_id", str(period_id))
-        .execute()
+    supabase.table("payroll_entries")
+    .select(
+        "*, staff(first_name, last_name, role_id, bank_sort_code, roles(name))"
     )
+    .eq("period_id", str(period_id))
+    .execute()
+)
 
     return {"period": period.data, "entries": entries.data}
 
@@ -400,12 +407,9 @@ def approve_payroll_period(period_id: UUID):
     )
     return response.data[0]
 
-
 # ============================================================================
 # Payroll entries
 # ============================================================================
-
-
 @router.patch("/entries/{entry_id}")
 def update_payroll_entry(entry_id: UUID, payload: PayrollEntryUpdate):
     """Edit gross, working days, or deductions. Net is auto-recomputed."""
@@ -495,3 +499,105 @@ def _refresh_period_totals(supabase, period_id: str) -> None:
     supabase.table("payroll_periods").update(
         {"total_gross": float(total_gross), "total_net": float(total_net)}
     ).eq("id", period_id).execute()
+
+# ============================================================================
+# Export bank sheet
+# ============================================================================
+@router.get("/periods/{period_id}/export-bank-sheet")
+def export_bank_sheet(period_id: UUID):
+    """Export approved payroll entries as a bulk bank-payment xlsx.
+
+    Matches the bank's required column format exactly:
+    PaymentAmount | PaymentDate | Reference | Remark | VendorCode |
+    VendorName | VendorAcctNumber | VendorBankSortCode
+    """
+    supabase = get_supabase()
+
+    period_resp = (
+        supabase.table("payroll_periods")
+        .select("*, outlets(name)")
+        .eq("id", str(period_id))
+        .single()
+        .execute()
+    )
+    if not period_resp.data:
+        raise HTTPException(status_code=404, detail="Payroll period not found")
+    period = period_resp.data
+
+    entries_resp = (
+        supabase.table("payroll_entries")
+        .select(
+            "net_pay, bank_account_number, bank_account_name, "
+            "staff(first_name, last_name, bank_sort_code)"
+        )
+        .eq("period_id", str(period_id))
+        .execute()
+    )
+    if not entries_resp.data:
+        raise HTTPException(status_code=400, detail="No payroll entries to export for this period")
+
+    period_end = date.fromisoformat(period["period_end"])
+    # Default payment date: 5th of the month after the period ends
+    if period_end.month == 12:
+        pay_date = date(period_end.year + 1, 1, 5)
+    else:
+        pay_date = date(period_end.year, period_end.month + 1, 5)
+    payment_date_str = pay_date.strftime("%d/%B/%Y").upper()
+
+    month_label = period_end.strftime("%B %Y").upper()
+    remark = f"SALARY FOR {month_label}"
+
+    outlet_name = (period.get("outlets") or {}).get("name", "OUTLET")
+    sheet_name = outlet_name[:31]  # Excel sheet name limit
+
+    missing = [
+        e for e in entries_resp.data
+        if not e.get("bank_account_number") or not (e.get("staff") or {}).get("bank_sort_code")
+    ]
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = sheet_name
+
+    headers = [
+        "PaymentAmount (number format, 2 decimal places (max)",
+        "PaymentDate (text format, dd / mmm / yyyy, max. 11 characters)",
+        "Reference (optional i.e cells can be left blank, text format, alpha-numeric, max. 20 characters)",
+        "Remark (text format, alpha-numeric, max. 25 characters)",
+        "VendorCode (text format, max. of 32 characters, e.g staff I.D, RC no. or name)",
+        "VendorName (text format, alpha-numeric, max. 50 characters)",
+        "VendorAcctNumber (text format, numeric, max. 15 digits)",
+        "VendorBankSortCode (text format, 9 digits)",
+    ]
+    ws.append(headers)
+    for cell in ws[1]:
+        cell.font = Font(bold=True)
+
+    for e in entries_resp.data:
+        staff = e.get("staff") or {}
+        full_name = f"{staff.get('first_name', '')} {staff.get('last_name', '')}".strip()
+        ws.append([
+            round(float(e["net_pay"]), 2),
+            payment_date_str,
+            "",
+            remark[:25],
+            full_name[:32],
+            (e.get("bank_account_name") or full_name)[:50],
+            e.get("bank_account_number") or "",
+            staff.get("bank_sort_code") or "",
+        ])
+
+    buffer = BytesIO()
+    wb.save(buffer)
+    buffer.seek(0)
+
+    filename = f"{outlet_name.replace(' ', '_')}_salary_{period_end.strftime('%b%Y')}.xlsx"
+    headers_out = {"Content-Disposition": f'attachment; filename="{filename}"'}
+    if missing:
+        headers_out["X-Missing-Bank-Details"] = str(len(missing))
+
+    return StreamingResponse(
+        buffer,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers=headers_out,
+    )
