@@ -22,6 +22,10 @@ export type ApplicationPayload = {
   email: string;
   phone: string;
   cover_letter?: string;
+  cv?: File;
+  cover_letter_file?: File;
+  certificate?: File;
+  nysc_certificate?: File;
 };
 
 export type ApplicationResponse = {
@@ -32,6 +36,20 @@ export type ApplicationResponse = {
 export async function submitApplication(
   payload: ApplicationPayload,
 ): Promise<ApplicationResponse> {
-  const { data } = await apiClient.post("/api/applications/", payload);
+  const formData = new FormData();
+  formData.append("job_posting_id", payload.job_posting_id);
+  formData.append("first_name", payload.first_name);
+  formData.append("last_name", payload.last_name);
+  formData.append("email", payload.email);
+  formData.append("phone", payload.phone);
+  if (payload.cover_letter) formData.append("cover_letter", payload.cover_letter);
+  if (payload.cv) formData.append("cv", payload.cv);
+  if (payload.cover_letter_file)
+    formData.append("cover_letter_file", payload.cover_letter_file);
+  if (payload.certificate) formData.append("certificate", payload.certificate);
+  if (payload.nysc_certificate)
+    formData.append("nysc_certificate", payload.nysc_certificate);
+
+  const { data } = await apiClient.post("/api/applications/", formData);
   return data;
 }

@@ -13,13 +13,17 @@ import {
 } from "lucide-react";
 import { fetchPublicJob, submitApplication } from "@/lib/api/careers";
 
+type Tab = "overview" | "application";
+
 export default function PublicJobDetailPage({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
   const { id } = use(params);
+  const [tab, setTab] = useState<Tab>("overview");
   const [submitted, setSubmitted] = useState(false);
+  const [coverLetterError, setCoverLetterError] = useState<string | null>(null);
 
   const jobQuery = useQuery({
     queryKey: ["public-job", id],
@@ -55,6 +59,20 @@ export default function PublicJobDetailPage({
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const form = new FormData(e.currentTarget);
+    const cv = form.get("cv") as File;
+    const coverLetterText = (form.get("cover_letter") as string) || "";
+    const coverLetterFile = form.get("cover_letter_file") as File;
+    const certificate = form.get("certificate") as File;
+    const nyscCertificate = form.get("nysc_certificate") as File;
+
+    const hasCoverLetterText = coverLetterText.trim().length > 0;
+    const hasCoverLetterFile = coverLetterFile && coverLetterFile.size > 0;
+    if (!hasCoverLetterText && !hasCoverLetterFile) {
+      setCoverLetterError("Paste a cover letter or upload a file.");
+      return;
+    }
+    setCoverLetterError(null);
+
     applyMut.mutate({
       job_posting_id: id,
       first_name: form.get("first_name") as string,
@@ -62,6 +80,12 @@ export default function PublicJobDetailPage({
       email: form.get("email") as string,
       phone: form.get("phone") as string,
       cover_letter: (form.get("cover_letter") as string) || undefined,
+      cv: cv && cv.size > 0 ? cv : undefined,
+      cover_letter_file:
+        coverLetterFile && coverLetterFile.size > 0 ? coverLetterFile : undefined,
+      certificate: certificate && certificate.size > 0 ? certificate : undefined,
+      nysc_certificate:
+        nyscCertificate && nyscCertificate.size > 0 ? nyscCertificate : undefined,
     });
   }
 
@@ -76,13 +100,13 @@ export default function PublicJobDetailPage({
       </Link>
 
       {/* Job header */}
-      <header className="mt-4 rounded-lg border border-stone-200 bg-white p-6">
-        <div className="flex items-center gap-2 text-xs uppercase tracking-wider text-stone-500">
+      <header className="mt-4 rounded-lg border border-stone-200 bg-white p-6 text-center">
+        <div className="flex items-center justify-center gap-2 text-xs uppercase tracking-wider text-stone-500">
           <Briefcase className="h-3.5 w-3.5" />
           {job.roles?.unit ?? "—"} unit
         </div>
         <h1 className="mt-2 text-2xl font-bold text-stone-900">{job.title}</h1>
-        <div className="mt-3 flex flex-wrap items-center gap-3 text-sm text-stone-600">
+        <div className="mt-3 flex flex-wrap items-center justify-center gap-3 text-sm text-stone-600">
           <span className="inline-flex items-center gap-1">
             <MapPin className="h-4 w-4" /> {job.outlets?.name ?? "—"}
           </span>
@@ -100,119 +124,213 @@ export default function PublicJobDetailPage({
         </div>
       </header>
 
-      {/* Description */}
-      {job.description && (
-        <section className="mt-6 rounded-lg border border-stone-200 bg-white p-6">
-          <pre className="whitespace-pre-wrap font-sans text-sm leading-relaxed text-stone-700">
-            {job.description}
-          </pre>
-        </section>
-      )}
+      {/* Tabs */}
+      <div className="mt-6 flex gap-6 border-b border-stone-200">
+        <TabButton active={tab === "overview"} onClick={() => setTab("overview")}>
+          Overview
+        </TabButton>
+        <TabButton active={tab === "application"} onClick={() => setTab("application")}>
+          Application
+        </TabButton>
+      </div>
 
-      {/* Requirements */}
-      {job.requirements && job.requirements.length > 0 && (
-        <section className="mt-6 rounded-lg border border-stone-200 bg-white p-6">
-          <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-stone-500">
-            Requirements
-          </h2>
-          <ul className="space-y-2">
-            {job.requirements.map((req, idx) => (
-              <li key={idx} className="flex gap-3 text-sm">
-                <span className="mt-2 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-amber-700" />
-                <span className="text-stone-700">{req}</span>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
+      {tab === "overview" ? (
+        <div>
+          {/* Description */}
+          {job.description && (
+            <section className="mt-6 rounded-lg border border-stone-200 bg-white p-6">
+              <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-stone-500">
+                Description
+              </h2>
+              <pre className="whitespace-pre-wrap font-sans text-sm leading-relaxed text-stone-700">
+                {job.description}
+              </pre>
+            </section>
+          )}
 
-      {/* Apply form */}
-      <section
-        id="apply"
-        className="mt-6 rounded-lg border border-amber-200 bg-amber-50 p-6"
-      >
-        {submitted ? (
-          <div className="text-center">
-            <CheckCircle2 className="mx-auto h-12 w-12 text-green-600" />
-            <h3 className="mt-3 text-lg font-semibold text-stone-900">
-              Application received
-            </h3>
-            <p className="mx-auto mt-2 max-w-md text-sm text-stone-600">
-              Thank you. Our HR team has received your application and will reach
-              out to you shortly if your profile matches what we&apos;re looking for.
-            </p>
-            <Link
-              href="/careers"
-              className="mt-6 inline-block rounded-md bg-white px-4 py-2 text-sm font-medium text-amber-700 ring-1 ring-amber-200 hover:bg-amber-100"
+          {/* Requirements */}
+          {job.requirements && job.requirements.length > 0 && (
+            <section className="mt-6 rounded-lg border border-stone-200 bg-white p-6">
+              <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-stone-500">
+                Requirements
+              </h2>
+              <ul className="space-y-2">
+                {job.requirements.map((req, idx) => (
+                  <li key={idx} className="flex gap-3 text-sm">
+                    <span className="mt-2 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-amber-700" />
+                    <span className="text-stone-700">{req}</span>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+
+          <div className="mt-6 flex justify-center">
+            <button
+              onClick={() => setTab("application")}
+              className="inline-flex items-center gap-2 rounded-md bg-amber-700 px-6 py-2.5 text-sm font-medium text-white hover:bg-amber-800"
             >
-              View other roles
-            </Link>
+              Apply for this job
+            </button>
           </div>
-        ) : (
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <h2 className="text-lg font-semibold text-stone-900">
-              Apply for this role
-            </h2>
-            <p className="text-xs text-stone-600">
-              Fill in the form below. We review every application and reply within 7 days.
-            </p>
+        </div>
+      ) : (
+        <section className="mt-6 rounded-lg border border-amber-200 bg-amber-50 p-6">
+          {submitted ? (
+            <div className="text-center">
+              <CheckCircle2 className="mx-auto h-12 w-12 text-green-600" />
+              <h3 className="mt-3 text-lg font-semibold text-stone-900">
+                Application received
+              </h3>
+              <p className="mx-auto mt-2 max-w-md text-sm text-stone-600">
+                Thank you. Our HR team has received your application and will reach
+                out to you shortly if your profile matches what we&apos;re looking for.
+              </p>
+              <Link
+                href="/careers"
+                className="mt-6 inline-block rounded-md bg-white px-4 py-2 text-sm font-medium text-amber-700 ring-1 ring-amber-200 hover:bg-amber-100"
+              >
+                View other roles
+              </Link>
+            </div>
+          ) : (
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <h2 className="text-lg font-semibold text-stone-900">
+                Apply for this role
+              </h2>
+              <p className="text-xs text-stone-600">
+                Fill in the form below. We review every application and reply within 7 days.
+              </p>
 
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <Field label="First name" required>
-                <input name="first_name" required className={inputCls} />
-              </Field>
-              <Field label="Last name" required>
-                <input name="last_name" required className={inputCls} />
-              </Field>
-              <Field label="Email" required>
-                <input name="email" type="email" required className={inputCls} />
-              </Field>
-              <Field label="Phone" required>
-                <input
-                  name="phone"
-                  type="tel"
-                  required
-                  pattern="[0-9+]{7,20}"
-                  placeholder="08012345678"
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <Field label="First name" required>
+                  <input name="first_name" required className={inputCls} />
+                </Field>
+                <Field label="Last name" required>
+                  <input name="last_name" required className={inputCls} />
+                </Field>
+                <Field label="Email" required>
+                  <input name="email" type="email" required className={inputCls} />
+                </Field>
+                <Field label="Phone" required>
+                  <input
+                    name="phone"
+                    type="tel"
+                    required
+                    pattern="[0-9+]{7,20}"
+                    placeholder="08012345678"
+                    className={inputCls}
+                  />
+                </Field>
+              </div>
+
+              <Field label="Cover letter" required>
+                <textarea
+                  name="cover_letter"
+                  rows={6}
+                  placeholder="Tell us briefly why you're a good fit. Mention relevant experience and what you'd bring to the role."
                   className={inputCls}
                 />
               </Field>
-            </div>
+              <Field label="Or upload a cover letter file" required>
+                <input
+                  name="cover_letter_file"
+                  type="file"
+                  accept=".pdf,.jpg,.jpeg,.png"
+                  className={fileInputCls}
+                />
+              </Field>
+              <p className="-mt-2 text-xs text-stone-500">
+                Provide a cover letter either as pasted text above or as an uploaded file.
+              </p>
+              {coverLetterError && (
+                <p className="-mt-2 text-xs text-red-600">{coverLetterError}</p>
+              )}
 
-            <Field label="Cover letter">
-              <textarea
-                name="cover_letter"
-                rows={6}
-                placeholder="Tell us briefly why you're a good fit. Mention relevant experience and what you'd bring to the role."
-                className={inputCls}
-              />
-            </Field>
-
-            {applyMut.isError && (
-              <div className="rounded-md border border-red-200 bg-white p-3 text-xs text-red-700">
-                {(applyMut.error as Error).message}
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                <Field label="CV / resume" required>
+                  <input
+                    name="cv"
+                    type="file"
+                    required
+                    accept=".pdf,.jpg,.jpeg,.png"
+                    className={fileInputCls}
+                  />
+                </Field>
+                <Field label="Certificate" required>
+                  <input
+                    name="certificate"
+                    type="file"
+                    required
+                    accept=".pdf,.jpg,.jpeg,.png"
+                    className={fileInputCls}
+                  />
+                </Field>
+                <Field label="NYSC certificate (optional)">
+                  <input
+                    name="nysc_certificate"
+                    type="file"
+                    accept=".pdf,.jpg,.jpeg,.png"
+                    className={fileInputCls}
+                  />
+                </Field>
               </div>
-            )}
+              <p className="text-xs text-stone-500">
+                Accepted formats: PDF, JPEG, PNG. Max 5MB per file.
+              </p>
 
-            <div className="flex justify-end pt-2">
-              <button
-                type="submit"
-                disabled={applyMut.isPending}
-                className="inline-flex items-center gap-2 rounded-md bg-amber-700 px-5 py-2 text-sm font-medium text-white hover:bg-amber-800 disabled:opacity-50"
-              >
-                <Send className="h-4 w-4" />
-                {applyMut.isPending ? "Submitting…" : "Submit application"}
-              </button>
-            </div>
-          </form>
-        )}
-      </section>
+              {applyMut.isError && (
+                <div className="rounded-md border border-red-200 bg-white p-3 text-xs text-red-700">
+                  {(applyMut.error as Error).message}
+                </div>
+              )}
+
+              <div className="flex justify-end pt-2">
+                <button
+                  type="submit"
+                  disabled={applyMut.isPending}
+                  className="inline-flex items-center gap-2 rounded-md bg-amber-700 px-5 py-2 text-sm font-medium text-white hover:bg-amber-800 disabled:opacity-50"
+                >
+                  <Send className="h-4 w-4" />
+                  {applyMut.isPending ? "Submitting…" : "Submit application"}
+                </button>
+              </div>
+            </form>
+          )}
+        </section>
+      )}
     </div>
   );
 }
 
 const inputCls =
   "w-full rounded-md border border-stone-300 bg-white px-3 py-2 text-sm focus:border-amber-700 focus:outline-none";
+
+const fileInputCls =
+  "w-full rounded-md border border-stone-300 bg-white px-3 py-2 text-xs file:mr-3 file:rounded file:border-0 file:bg-amber-100 file:px-2 file:py-1 file:text-xs file:font-medium file:text-amber-800 focus:border-amber-700 focus:outline-none";
+
+function TabButton({
+  active,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={`-mb-px border-b-2 pb-3 text-sm font-medium transition-colors ${
+        active
+          ? "border-amber-700 text-amber-700"
+          : "border-transparent text-stone-500 hover:text-stone-700"
+      }`}
+    >
+      {children}
+    </button>
+  );
+}
 
 function Field({
   label,

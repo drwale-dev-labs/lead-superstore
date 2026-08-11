@@ -57,14 +57,17 @@ class JobPosting(BaseModel):
 
 
 class ApplicationCreate(BaseModel):
-    """Request body for submitting an application (public, from e-commerce site)."""
+    """Structured fields for submitting an application (public, from e-commerce site).
+
+    Submitted as multipart/form-data alongside optional file uploads (CV, cover
+    letter, certificates), so this validates the text fields only.
+    """
 
     job_posting_id: UUID
     first_name: str = Field(..., min_length=1, max_length=100)
     last_name: str = Field(..., min_length=1, max_length=100)
     email: EmailStr
     phone: str = Field(..., min_length=7, max_length=20)
-    resume_url: str | None = None
     cover_letter: str | None = Field(None, max_length=5000)
 
 
@@ -86,6 +89,14 @@ class Application(BaseModel):
     phone: str
     resume_url: str | None = None
     cover_letter: str | None = None
+    cv_path: str | None = None
+    cv_filename: str | None = None
+    cover_letter_path: str | None = None
+    cover_letter_filename: str | None = None
+    certificate_path: str | None = None
+    certificate_filename: str | None = None
+    nysc_certificate_path: str | None = None
+    nysc_certificate_filename: str | None = None
     status: str
     notes: str | None = None
     applied_at: datetime

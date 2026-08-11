@@ -13,7 +13,11 @@ import {
   MapPin,
   Calendar,
 } from "lucide-react";
-import { fetchApplicationById, updateApplication } from "@/lib/api/applications";
+import {
+  fetchApplicationById,
+  fetchApplicationDocumentUrl,
+  updateApplication,
+} from "@/lib/api/applications";
 import { LoadingState, ErrorState } from "@/components/ui/states";
 import { ApplicationStatusBadge } from "@/components/ui/application-status-badge";
 import type { ApplicationStatus } from "@/lib/types";
@@ -189,22 +193,43 @@ export default function ApplicationDetailPage({
         )}
       </section>
 
-      {/* Resume */}
-      {a.resume_url && (
+      {/* Documents */}
+      {(a.cv_path || a.cover_letter_path || a.certificate_path || a.nysc_certificate_path) && (
         <section className="rounded-lg border border-stone-200 bg-white p-6">
           <h2 className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-stone-500">
             <FileText className="h-3.5 w-3.5" />
-            Resume
+            Documents
           </h2>
-          <a
-            href={a.resume_url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 rounded-md bg-amber-50 px-3 py-2 text-xs font-medium text-amber-800 hover:bg-amber-100"
-          >
-            <FileText className="h-3.5 w-3.5" />
-            Open resume
-          </a>
+          <div className="flex flex-wrap gap-2">
+            {a.cv_path && (
+              <DocumentLink
+                applicationId={a.id}
+                path={a.cv_path}
+                label={a.cv_filename ?? "CV / resume"}
+              />
+            )}
+            {a.cover_letter_path && (
+              <DocumentLink
+                applicationId={a.id}
+                path={a.cover_letter_path}
+                label={a.cover_letter_filename ?? "Cover letter file"}
+              />
+            )}
+            {a.certificate_path && (
+              <DocumentLink
+                applicationId={a.id}
+                path={a.certificate_path}
+                label={a.certificate_filename ?? "Certificate"}
+              />
+            )}
+            {a.nysc_certificate_path && (
+              <DocumentLink
+                applicationId={a.id}
+                path={a.nysc_certificate_path}
+                label={a.nysc_certificate_filename ?? "NYSC certificate"}
+              />
+            )}
+          </div>
         </section>
       )}
 
@@ -240,5 +265,38 @@ export default function ApplicationDetailPage({
         </div>
       </section>
     </div>
+  );
+}
+
+function DocumentLink({
+  applicationId,
+  path,
+  label,
+}: {
+  applicationId: string;
+  path: string;
+  label: string;
+}) {
+  const [loading, setLoading] = useState(false);
+
+  async function handleClick() {
+    setLoading(true);
+    try {
+      const url = await fetchApplicationDocumentUrl(applicationId, path);
+      window.open(url, "_blank", "noopener,noreferrer");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <button
+      onClick={handleClick}
+      disabled={loading}
+      className="inline-flex items-center gap-2 rounded-md bg-amber-50 px-3 py-2 text-xs font-medium text-amber-800 hover:bg-amber-100 disabled:opacity-50"
+    >
+      <FileText className="h-3.5 w-3.5" />
+      {loading ? "Opening…" : label}
+    </button>
   );
 }

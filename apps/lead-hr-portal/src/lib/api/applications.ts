@@ -23,6 +23,17 @@ export async function fetchApplicationById(id: string): Promise<Application> {
   return ApplicationSchema.parse(data);
 }
 
+export async function fetchApplicationDocumentUrl(
+  applicationId: string,
+  path: string,
+): Promise<string> {
+  const { data } = await apiClient.get(
+    `/api/applications/${applicationId}/documents/signed-url`,
+    { params: { path } },
+  );
+  return data.url;
+}
+
 export type UpdateApplicationPayload = {
   status?: ApplicationStatus;
   notes?: string;
