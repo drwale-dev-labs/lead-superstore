@@ -3,7 +3,9 @@
 import { useQuery } from "@tanstack/react-query";
 import { fetchOutlets } from "@/lib/api/outlets";
 import { fetchRoles } from "@/lib/api/roles";
-import { Building2, ClipboardList } from "lucide-react";
+import { fetchStaff } from "@/lib/api/staff";
+import { fetchJobs } from "@/lib/api/jobs";
+import { Building2, ClipboardList, Users, Briefcase } from "lucide-react";
 
 export default function DashboardPage() {
   const outletsQuery = useQuery({
@@ -16,9 +18,21 @@ export default function DashboardPage() {
     queryFn: () => fetchRoles(),
   });
 
+  const staffQuery = useQuery({
+    queryKey: ["staff", { status: "active" }],
+    queryFn: () => fetchStaff({ status: "active" }),
+  });
+
+  const jobsQuery = useQuery({
+    queryKey: ["jobs", { status: "published" }],
+    queryFn: () => fetchJobs({ status: "published" }),
+  });
+
   const totalRoles = rolesQuery.data?.length ?? 0;
   const totalOutlets = outletsQuery.data?.length ?? 0;
   const operatingOutlets = outletsQuery.data?.filter((o) => !o.is_warehouse).length ?? 0;
+  const activeStaffCount = staffQuery.data?.length;
+  const openJobsCount = jobsQuery.data?.length;
 
   return (
     <div className="space-y-6">
@@ -26,8 +40,18 @@ export default function DashboardPage() {
       <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard label="Outlets" value={totalOutlets} sub={`${operatingOutlets} operating + warehouse`} icon={Building2} />
         <StatCard label="Roles defined" value={totalRoles} sub="across all units" icon={ClipboardList} />
-        <StatCard label="Active staff" value="—" sub="connect employees in step 12" />
-        <StatCard label="Open jobs" value="—" sub="connect jobs in step 14" />
+        <StatCard
+          label="Active staff"
+          value={staffQuery.isLoading ? "—" : (activeStaffCount ?? "—")}
+          sub="currently active"
+          icon={Users}
+        />
+        <StatCard
+          label="Open jobs"
+          value={jobsQuery.isLoading ? "—" : (openJobsCount ?? "—")}
+          sub="published postings"
+          icon={Briefcase}
+        />
       </section>
 
       {/* Detail row */}

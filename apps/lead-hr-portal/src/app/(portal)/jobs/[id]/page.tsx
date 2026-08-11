@@ -277,7 +277,7 @@ const [editedRequirements, setEditedRequirements] = useState<string[]>([]);
       {job.status === "published" && (
         <section className="rounded-lg border border-green-200 bg-green-50 p-4 text-xs text-green-800">
           <strong>Live on careers page.</strong> This job is visible to applicants on
-          the e-commerce careers page (we'll wire that up in Step 14b).
+          the e-commerce careers page.
         </section>
       )}
     </div>
