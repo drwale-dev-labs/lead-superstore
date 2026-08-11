@@ -66,7 +66,7 @@ Requirements:
 Write the ad now. Output only the ad — no preamble, no explanations."""
 
     response = client.messages.create(
-        model="claude-sonnet-4-20250514",
+        model="claude-sonnet-5",
         max_tokens=1500,
         messages=[{"role": "user", "content": prompt}],
     )
@@ -130,7 +130,7 @@ Requirements:
 Generate exactly {num_questions} questions. Output only the test — no preamble."""
 
     response = client.messages.create(
-        model="claude-sonnet-4-20250514",
+        model="claude-sonnet-5",
         max_tokens=3000,
         messages=[{"role": "user", "content": prompt}],
     )
@@ -187,7 +187,7 @@ Requirements:
 Output only the question set — no preamble."""
 
     response = client.messages.create(
-        model="claude-sonnet-4-20250514",
+        model="claude-sonnet-5",
         max_tokens=2500,
         messages=[{"role": "user", "content": prompt}],
     )
