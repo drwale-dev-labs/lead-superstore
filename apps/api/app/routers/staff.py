@@ -145,6 +145,40 @@ def activate_staff(staff_id: UUID):
     return response.data[0]
 
 
+@router.post("/{staff_id}/activate-existing")
+def activate_existing_staff(staff_id: UUID):
+    """Activate an already-employed staff member onboarded via the 'existing
+    staff' wizard path — no reference/guarantor requirement.
+
+    This is intentionally a separate route from /activate, not a bypass flag
+    on it, so the new-hire verification gate stays untouched. Only use this
+    for staff genuinely known/trusted and already working at Lead Superstore
+    (see BUGFIX_RUNBOOK.md Phase 6) — never as a shortcut for new external
+    hires.
+    """
+    supabase = get_supabase()
+
+    staff = (
+        supabase.table("staff").select("id, status").eq("id", str(staff_id)).execute()
+    )
+    if not staff.data:
+        raise HTTPException(status_code=404, detail="Staff member not found")
+
+    response = (
+        supabase.table("staff")
+        .update(
+            {
+                "status": "active",
+                "verified_at": datetime.now(timezone.utc).isoformat(),
+            }
+        )
+        .eq("id", str(staff_id))
+        .execute()
+    )
+
+    return response.data[0]
+
+
 @router.delete("/{staff_id}", status_code=status.HTTP_200_OK)
 def delete_staff(staff_id: UUID):
     """Soft-delete by setting status='terminated'. Hard delete is not allowed.

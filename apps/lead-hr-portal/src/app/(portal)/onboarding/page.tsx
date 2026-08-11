@@ -4,44 +4,116 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Check, ArrowRight, UserPlus, Shield, FileSignature, Camera } from "lucide-react";
+import {
+  Check,
+  ArrowRight,
+  UserPlus,
+  Shield,
+  FileSignature,
+  Camera,
+  Wallet,
+  UserCheck,
+} from "lucide-react";
 import { fetchOutlets } from "@/lib/api/outlets";
 import { fetchRoles } from "@/lib/api/roles";
-import { createStaff, activateStaff } from "@/lib/api/staff";
+import { createStaff, activateStaff, activateExistingStaff } from "@/lib/api/staff";
+import { createSalaryStructure } from "@/lib/api/salary";
 import {
   addReference,
   addGuarantor,
   uploadStaffPhoto,
 } from "@/lib/api/verification";
+import { PhotoCapture } from "@/components/staff/photo-capture";
 import { LoadingState, ErrorState } from "@/components/ui/states";
 import type { ReferenceType, Staff } from "@/lib/types";
 
-type Stage = "register" | "photo" | "reference" | "guarantor" | "review";
+type Path = "new_hire" | "existing_staff";
+type Stage =
+  | "choice"
+  | "register"
+  | "photo"
+  | "salary"
+  | "reference"
+  | "guarantor"
+  | "review";
 
 export default function OnboardingPage() {
-  const [stage, setStage] = useState<Stage>("register");
+  const [path, setPath] = useState<Path | null>(null);
+  const [stage, setStage] = useState<Stage>("choice");
   const [staff, setStaff] = useState<Staff | null>(null);
   const [photoDone, setPhotoDone] = useState(false);
+  const [salaryDone, setSalaryDone] = useState(false);
   const [refDone, setRefDone] = useState(false);
   const [guarDone, setGuarDone] = useState(false);
   const router = useRouter();
   const qc = useQueryClient();
 
-  const stages: { key: Stage; label: string; icon: typeof UserPlus }[] = [
-    { key: "register", label: "Register", icon: UserPlus },
-    { key: "photo", label: "Photo", icon: Camera },
-    { key: "reference", label: "Reference", icon: FileSignature },
-    { key: "guarantor", label: "Guarantor", icon: Shield },
-    { key: "review", label: "Activate", icon: Check },
-  ];
+  const isExisting = path === "existing_staff";
+
+  const stages: { key: Stage; label: string; icon: typeof UserPlus }[] = isExisting
+    ? [
+        { key: "register", label: "Register", icon: UserPlus },
+        { key: "photo", label: "Photo", icon: Camera },
+        { key: "salary", label: "Salary", icon: Wallet },
+        { key: "review", label: "Activate", icon: Check },
+      ]
+    : [
+        { key: "register", label: "Register", icon: UserPlus },
+        { key: "photo", label: "Photo", icon: Camera },
+        { key: "reference", label: "Reference", icon: FileSignature },
+        { key: "guarantor", label: "Guarantor", icon: Shield },
+        { key: "review", label: "Activate", icon: Check },
+      ];
 
   const currentIdx = stages.findIndex((s) => s.key === stage);
+
+  if (stage === "choice") {
+    return (
+      <div className="mx-auto max-w-2xl space-y-6">
+        <p className="text-sm text-stone-600">
+          Choose the onboarding path that fits this employee.
+        </p>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <button
+            onClick={() => {
+              setPath("new_hire");
+              setStage("register");
+            }}
+            className="rounded-lg border border-stone-200 bg-white p-6 text-left transition-colors hover:border-amber-300"
+          >
+            <UserPlus className="h-6 w-6 text-amber-700" />
+            <h3 className="mt-3 text-sm font-semibold text-stone-900">New hire</h3>
+            <p className="mt-1 text-xs text-stone-500">
+              Full verification — photo, reference, and guarantor required before
+              activation. Use this for genuinely new external hires.
+            </p>
+          </button>
+          <button
+            onClick={() => {
+              setPath("existing_staff");
+              setStage("register");
+            }}
+            className="rounded-lg border border-stone-200 bg-white p-6 text-left transition-colors hover:border-amber-300"
+          >
+            <UserCheck className="h-6 w-6 text-amber-700" />
+            <h3 className="mt-3 text-sm font-semibold text-stone-900">Existing staff</h3>
+            <p className="mt-1 text-xs text-stone-500">
+              Already working at Lead Superstore and known/trusted — skips
+              reference/guarantor collection, but still captures banking details and
+              salary directly.
+            </p>
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
       <p className="text-sm text-stone-600">
-        Complete all five steps to onboard and activate a new employee. Photo, reference,
-        and guarantor are required before activation.
+        {isExisting
+          ? "Onboarding an existing staff member — reference and guarantor collection is skipped."
+          : "Complete all five steps to onboard and activate a new employee. Photo, reference, and guarantor are required before activation."}
       </p>
 
       {/* Stepper */}
@@ -51,6 +123,7 @@ export default function OnboardingPage() {
           const done =
             (s.key === "register" && staff !== null) ||
             (s.key === "photo" && photoDone) ||
+            (s.key === "salary" && salaryDone) ||
             (s.key === "reference" && refDone) ||
             (s.key === "guarantor" && guarDone);
           const active = idx === currentIdx;
@@ -102,8 +175,17 @@ export default function OnboardingPage() {
           staffId={staff.id}
           onDone={() => {
             setPhotoDone(true);
-            setStage("reference");
+            setStage(isExisting ? "salary" : "reference");
             qc.invalidateQueries({ queryKey: ["staff", staff.id] });
+          }}
+        />
+      )}
+      {stage === "salary" && staff && (
+        <SalaryStage
+          staffId={staff.id}
+          onDone={() => {
+            setSalaryDone(true);
+            setStage("review");
           }}
         />
       )}
@@ -128,6 +210,7 @@ export default function OnboardingPage() {
       {stage === "review" && staff && (
         <ReviewStage
           staff={staff}
+          isExisting={isExisting}
           onActivated={() => {
             qc.invalidateQueries({ queryKey: ["staff"] });
             router.push(`/staff/${staff.id}`);
@@ -167,6 +250,7 @@ function RegisterStage({ onSuccess }: { onSuccess: (s: Staff) => void }) {
       bank_name: (form.get("bank_name") as string) || null,
       bank_account_number: (form.get("bank_account_number") as string) || null,
       bank_account_name: (form.get("bank_account_name") as string) || null,
+      bank_sort_code: (form.get("bank_sort_code") as string) || null,
     });
   }
 
@@ -231,6 +315,9 @@ function RegisterStage({ onSuccess }: { onSuccess: (s: Staff) => void }) {
         <Field label="Account name">
           <input name="bank_account_name" className={inputCls} />
         </Field>
+        <Field label="Bank sort code">
+          <input name="bank_sort_code" className={inputCls} placeholder="000000" />
+        </Field>
       </div>
 
       {mutation.isError && <ErrorState message={(mutation.error as Error).message} />}
@@ -253,7 +340,6 @@ function RegisterStage({ onSuccess }: { onSuccess: (s: Staff) => void }) {
 // ============================================================================
 
 function PhotoStage({ staffId, onDone }: { staffId: string; onDone: () => void }) {
-  const [preview, setPreview] = useState<string | null>(null);
   const [file, setFile] = useState<File | null>(null);
 
   const mutation = useMutation({
@@ -264,52 +350,14 @@ function PhotoStage({ staffId, onDone }: { staffId: string; onDone: () => void }
     onSuccess: onDone,
   });
 
-  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const selected = e.target.files?.[0] ?? null;
-    setFile(selected);
-    if (selected) {
-      const reader = new FileReader();
-      reader.onload = () => setPreview(reader.result as string);
-      reader.readAsDataURL(selected);
-    } else {
-      setPreview(null);
-    }
-  }
-
   return (
     <div className="rounded-lg border border-stone-200 bg-white p-6 space-y-4">
       <SectionTitle>Profile photo</SectionTitle>
       <p className="text-xs text-stone-500">
-        Required. A clear face photo. JPEG, PNG, or WebP — max 2 MB.
+        Required. A clear face photo — capture from the camera or upload a file.
       </p>
 
-      <div className="flex items-start gap-6">
-        {/* Preview */}
-        <div className="flex h-32 w-32 flex-shrink-0 items-center justify-center overflow-hidden rounded-full border border-stone-200 bg-stone-50">
-          {preview ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={preview} alt="Preview" className="h-full w-full object-cover" />
-          ) : (
-            <Camera className="h-10 w-10 text-stone-300" />
-          )}
-        </div>
-
-        {/* Upload control */}
-        <div className="flex-1 space-y-3">
-          <input
-            type="file"
-            accept="image/jpeg,image/png,image/webp"
-            onChange={handleFileChange}
-            className="block w-full text-sm text-stone-600 file:mr-3 file:rounded-md file:border-0 file:bg-amber-50 file:px-3 file:py-2 file:text-sm file:font-medium file:text-amber-700 hover:file:bg-amber-100"
-          />
-          {file && (
-            <p className="text-xs text-stone-500">
-              Selected: <span className="font-medium text-stone-700">{file.name}</span>{" "}
-              ({(file.size / 1024).toFixed(0)} KB)
-            </p>
-          )}
-        </div>
-      </div>
+      <PhotoCapture onChange={(f) => setFile(f)} />
 
       {mutation.isError && <ErrorState message={(mutation.error as Error).message} />}
 
@@ -516,12 +564,87 @@ function GuarantorStage({ staffId, onDone }: { staffId: string; onDone: () => vo
 }
 
 // ============================================================================
+// Stage 3b (existing-staff path only) — Salary
+// ============================================================================
+
+function SalaryStage({ staffId, onDone }: { staffId: string; onDone: () => void }) {
+  const mutation = useMutation({
+    mutationFn: (payload: { gross_salary: number; effective_from: string }) =>
+      createSalaryStructure({ staff_id: staffId, ...payload }),
+    onSuccess: onDone,
+  });
+
+  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const form = new FormData(e.currentTarget);
+    mutation.mutate({
+      gross_salary: parseFloat(form.get("gross_salary") as string),
+      effective_from: form.get("effective_from") as string,
+    });
+  }
+
+  const today = new Date().toISOString().slice(0, 10);
+
+  return (
+    <form onSubmit={handleSubmit} className="rounded-lg border border-stone-200 bg-white p-6 space-y-4">
+      <SectionTitle>Current salary</SectionTitle>
+      <p className="text-xs text-stone-500">
+        Enter their existing known salary — this is an already-employed staff member, so
+        this should reflect what they currently earn, not a placeholder.
+      </p>
+
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <Field label="Gross salary (₦)" required>
+          <input
+            name="gross_salary"
+            type="number"
+            step="0.01"
+            min={1}
+            required
+            className={inputCls}
+          />
+        </Field>
+        <Field label="Effective from" required>
+          <input
+            name="effective_from"
+            type="date"
+            required
+            defaultValue={today}
+            className={inputCls}
+          />
+        </Field>
+      </div>
+
+      {mutation.isError && <ErrorState message={(mutation.error as Error).message} />}
+
+      <div className="flex justify-end pt-2">
+        <button
+          type="submit"
+          disabled={mutation.isPending}
+          className="rounded-md bg-amber-700 px-5 py-2 text-sm font-medium text-white hover:bg-amber-800 disabled:opacity-50"
+        >
+          {mutation.isPending ? "Saving…" : "Save & continue"}
+        </button>
+      </div>
+    </form>
+  );
+}
+
+// ============================================================================
 // Stage 5 — Review & activate
 // ============================================================================
 
-function ReviewStage({ staff, onActivated }: { staff: Staff; onActivated: () => void }) {
+function ReviewStage({
+  staff,
+  isExisting,
+  onActivated,
+}: {
+  staff: Staff;
+  isExisting: boolean;
+  onActivated: () => void;
+}) {
   const mutation = useMutation({
-    mutationFn: () => activateStaff(staff.id),
+    mutationFn: () => (isExisting ? activateExistingStaff(staff.id) : activateStaff(staff.id)),
     onSuccess: onActivated,
   });
 
@@ -532,12 +655,18 @@ function ReviewStage({ staff, onActivated }: { staff: Staff; onActivated: () => 
       <div className="rounded-md bg-green-50 border border-green-200 p-4 text-sm text-green-800">
         <div className="flex items-center gap-2 font-medium">
           <Check className="h-4 w-4" />
-          Verification complete
+          {isExisting ? "Details complete" : "Verification complete"}
         </div>
         <ul className="mt-2 ml-6 list-disc space-y-1 text-green-700">
           <li>Photo uploaded</li>
-          <li>Reference recorded</li>
-          <li>Guarantor recorded</li>
+          {isExisting ? (
+            <li>Salary recorded</li>
+          ) : (
+            <>
+              <li>Reference recorded</li>
+              <li>Guarantor recorded</li>
+            </>
+          )}
         </ul>
       </div>
 
