@@ -17,6 +17,7 @@ from app.schemas.payroll import (
     SalaryStructureCreate,
 )
 from app.services.payroll import compute_net_salary
+from app.services import training_bond
 
 router = APIRouter()
 
@@ -185,7 +186,7 @@ def generate_payroll_entries(period_id: UUID):
         supabase.table("staff")
         .select(
             "id, first_name, last_name, bank_name, "
-            "bank_account_number, bank_account_name"
+            "bank_account_number, bank_account_name, hired_at"
         )
         .eq("outlet_id", outlet_id)
         .eq("status", "active")
@@ -299,10 +300,35 @@ def generate_payroll_entries(period_id: UUID):
                 {"status": "applied", "applied_to_period_id": str(period_id)}
             ).eq("id", fine["id"]).execute()
 
+        # 4. Training bond (₦5,000/month deduction for months 1-6, payback months 7-12)
+        bond_item = None
+        bond = None
+        if staff.get("hired_at"):
+            hired_at = date.fromisoformat(staff["hired_at"])
+            bond = training_bond.get_or_create_bond(supabase, staff["id"], hired_at)
+            if bond:
+                bond_item = training_bond.compute_bond_item(bond, date.fromisoformat(period_end))
+                if bond_item:
+                    if bond_item["direction"] == "deduct":
+                        deduction_items.append(
+                            {
+                                "source_type": "training_bond",
+                                "source_id": bond["id"],
+                                "amount": float(bond_item["amount"]),
+                                "description": (
+                                    f"Training bond deduction (month {bond_item['month_number']} of 6)"
+                                ),
+                            }
+                        )
+                        total_deductions += bond_item["amount"]
+
         # === Compute net ===
         net = compute_net_salary(
             gross_salary=gross, working_days=30, deductions=total_deductions
         )
+        # Bond payback is added to net pay, not part of the deductions subtraction above
+        if bond_item and bond_item["direction"] == "payback":
+            net += bond_item["amount"]
 
         # Insert entry
         entry_resp = (
@@ -332,6 +358,11 @@ def generate_payroll_entries(period_id: UUID):
             supabase.table("payroll_entry_deductions").insert(
                 deduction_items
             ).execute()
+
+        # Snapshot bond item (deduct items are also in payroll_entry_deductions above
+        # for the deductions total; this table is the source of truth for bond state)
+        if bond_item and bond:
+            training_bond.record_bond_item(supabase, bond["id"], bond_item, entry_id)
 
         total_gross += gross
         total_net += net
@@ -392,6 +423,9 @@ def approve_payroll_period(period_id: UUID):
         if new_balance <= 0:
             update["status"] = "paid_off"
         supabase.table("loans").update(update).eq("id", loan_id).execute()
+
+    # Commit training bond running totals
+    training_bond.commit_bond_items_for_period(supabase, str(period_id))
 
     # Lock the period
     response = (
@@ -482,6 +516,23 @@ def get_entry_deductions(entry_id: UUID):
         .select("*")
         .eq("entry_id", str(entry_id))
         .order("source_type")
+        .execute()
+    )
+    return {"count": len(response.data), "items": response.data}
+
+
+@router.get("/entries/{entry_id}/bond-items")
+def get_entry_bond_items(entry_id: UUID):
+    """Show training bond deduct/payback items for this entry, if any.
+
+    Deduct items also appear in /deductions (they're part of the deductions
+    total); payback items only appear here since they add to net pay.
+    """
+    supabase = get_supabase()
+    response = (
+        supabase.table("payroll_entry_bond_items")
+        .select("*")
+        .eq("entry_id", str(entry_id))
         .execute()
     )
     return {"count": len(response.data), "items": response.data}

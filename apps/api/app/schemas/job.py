@@ -72,12 +72,34 @@ class ApplicationCreate(BaseModel):
 
 
 class ApplicationUpdate(BaseModel):
-    """Request body for HR to update an application's status."""
+    """Request body for HR to update an application's status.
+
+    Moving to 'shortlisted' requires interview_scheduled_at + interview_location
+    (an email is auto-sent). Moving to 'hired' requires resume_date (an email is
+    auto-sent). Moving to 'rejected' auto-sends a rejection email.
+    """
 
     status: str | None = Field(
         None, pattern="^(new|reviewing|shortlisted|interviewed|rejected|hired)$"
     )
     notes: str | None = None
+    interview_scheduled_at: datetime | None = None
+    interview_location: str | None = Field(None, max_length=300)
+    resume_date: date | None = None
+
+
+class InterviewScoreCreate(BaseModel):
+    communication_score: int = Field(..., ge=1, le=5)
+    role_knowledge_score: int = Field(..., ge=1, le=5)
+    reliability_score: int = Field(..., ge=1, le=5)
+    culture_fit_score: int = Field(..., ge=1, le=5)
+    overall_comment: str | None = Field(None, max_length=2000)
+
+
+class InterviewScore(InterviewScoreCreate):
+    id: UUID
+    application_id: UUID
+    scored_at: datetime
 
 
 class Application(BaseModel):
@@ -99,4 +121,7 @@ class Application(BaseModel):
     nysc_certificate_filename: str | None = None
     status: str
     notes: str | None = None
+    interview_scheduled_at: datetime | None = None
+    interview_location: str | None = None
+    resume_date: date | None = None
     applied_at: datetime

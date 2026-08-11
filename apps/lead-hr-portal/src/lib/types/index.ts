@@ -257,6 +257,9 @@ export const ApplicationSchema = z.object({
   nysc_certificate_filename: z.string().nullable().optional(),
   status: ApplicationStatusEnum,
   notes: z.string().nullable(),
+  interview_scheduled_at: z.string().nullable().optional(),
+  interview_location: z.string().nullable().optional(),
+  resume_date: z.string().nullable().optional(),
   applied_at: z.string(),
   // Joined when listing
   job_postings: z
@@ -276,6 +279,19 @@ export const ApplicationsResponseSchema = z.object({
 
 export type Application = z.infer<typeof ApplicationSchema>;
 export type ApplicationStatus = z.infer<typeof ApplicationStatusEnum>;
+
+export const InterviewScoreSchema = z.object({
+  id: z.string().uuid(),
+  application_id: z.string().uuid(),
+  communication_score: z.number().min(1).max(5),
+  role_knowledge_score: z.number().min(1).max(5),
+  reliability_score: z.number().min(1).max(5),
+  culture_fit_score: z.number().min(1).max(5),
+  overall_comment: z.string().nullable(),
+  scored_at: z.string(),
+});
+
+export type InterviewScore = z.infer<typeof InterviewScoreSchema>;
 
 // ============================================================================
 // Payroll
@@ -343,7 +359,7 @@ export type PeriodDetail = z.infer<typeof PeriodDetailSchema>;
 export const EntryDeductionSchema = z.object({
   id: z.string().uuid(),
   entry_id: z.string().uuid(),
-  source_type: z.enum(["loan", "advance", "fine"]),
+  source_type: z.enum(["loan", "advance", "fine", "training_bond"]),
   source_id: z.string().uuid(),
   amount: z.number(),
   description: z.string().nullable(),
@@ -355,6 +371,22 @@ export const EntryDeductionsResponseSchema = z.object({
 });
 
 export type EntryDeduction = z.infer<typeof EntryDeductionSchema>;
+
+export const BondItemSchema = z.object({
+  id: z.string().uuid(),
+  entry_id: z.string().uuid(),
+  bond_id: z.string().uuid(),
+  direction: z.enum(["deduct", "payback"]),
+  amount: z.number(),
+  month_number: z.number(),
+});
+
+export const BondItemsResponseSchema = z.object({
+  count: z.number(),
+  items: z.array(BondItemSchema),
+});
+
+export type BondItem = z.infer<typeof BondItemSchema>;
 
 // ============================================================================
 // Helpers

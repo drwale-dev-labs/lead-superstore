@@ -1,10 +1,12 @@
 import { apiClient } from "./client";
 import {
+  BondItemsResponseSchema,
   EntryDeductionsResponseSchema,
   PayrollEntrySchema,
   PayrollPeriodSchema,
   PayrollPeriodsResponseSchema,
   PeriodDetailSchema,
+  type BondItem,
   type EntryDeduction,
   type PayrollEntry,
   type PayrollPeriod,
@@ -90,4 +92,11 @@ export async function fetchEntryDeductions(
     `/api/payroll/entries/${entryId}/deductions`,
   );
   return EntryDeductionsResponseSchema.parse(data).items;
+}
+
+export async function fetchEntryBondItems(entryId: string): Promise<BondItem[]> {
+  const { data } = await apiClient.get(
+    `/api/payroll/entries/${entryId}/bond-items`,
+  );
+  return BondItemsResponseSchema.parse(data).items;
 }

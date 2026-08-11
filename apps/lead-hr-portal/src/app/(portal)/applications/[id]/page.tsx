@@ -12,11 +12,16 @@ import {
   Briefcase,
   MapPin,
   Calendar,
+  Star,
+  X,
 } from "lucide-react";
 import {
   fetchApplicationById,
   fetchApplicationDocumentUrl,
+  fetchInterviewScore,
+  saveInterviewScore,
   updateApplication,
+  type InterviewScorePayload,
 } from "@/lib/api/applications";
 import { LoadingState, ErrorState } from "@/components/ui/states";
 import { ApplicationStatusBadge } from "@/components/ui/application-status-badge";
@@ -41,10 +46,18 @@ export default function ApplicationDetailPage({
 
   const [notes, setNotes] = useState("");
   const [notesDirty, setNotesDirty] = useState(false);
+  const [showShortlistModal, setShowShortlistModal] = useState(false);
+  const [showHireModal, setShowHireModal] = useState(false);
 
   const query = useQuery({
     queryKey: ["application", id],
     queryFn: () => fetchApplicationById(id),
+  });
+
+  const scoreQuery = useQuery({
+    queryKey: ["interview-score", id],
+    queryFn: () => fetchInterviewScore(id),
+    enabled: !!query.data && query.data.status !== "new" && query.data.status !== "reviewing",
   });
 
   // Sync notes from server when data arrives or changes
@@ -59,6 +72,33 @@ export default function ApplicationDetailPage({
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["application", id] });
       qc.invalidateQueries({ queryKey: ["applications"] });
+    },
+  });
+
+  const shortlistMut = useMutation({
+    mutationFn: (vars: { interview_scheduled_at: string; interview_location: string }) =>
+      updateApplication(id, { status: "shortlisted", ...vars }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["application", id] });
+      qc.invalidateQueries({ queryKey: ["applications"] });
+      setShowShortlistModal(false);
+    },
+  });
+
+  const hireMut = useMutation({
+    mutationFn: (vars: { resume_date: string }) =>
+      updateApplication(id, { status: "hired", ...vars }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["application", id] });
+      qc.invalidateQueries({ queryKey: ["applications"] });
+      setShowHireModal(false);
+    },
+  });
+
+  const scoreMut = useMutation({
+    mutationFn: (payload: InterviewScorePayload) => saveInterviewScore(id, payload),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["interview-score", id] });
     },
   });
 
@@ -158,7 +198,14 @@ export default function ApplicationDetailPage({
               <button
                 key={stage.value}
                 onClick={() => {
-                  if (!isCurrent) statusMut.mutate(stage.value);
+                  if (isCurrent) return;
+                  if (stage.value === "shortlisted") {
+                    setShowShortlistModal(true);
+                  } else if (stage.value === "hired") {
+                    setShowHireModal(true);
+                  } else {
+                    statusMut.mutate(stage.value);
+                  }
                 }}
                 disabled={isCurrent || statusMut.isPending}
                 className={`rounded-md border px-3 py-1.5 text-xs font-medium transition-colors ${
@@ -176,6 +223,24 @@ export default function ApplicationDetailPage({
           <p className="mt-3 text-xs text-red-600">
             {(statusMut.error as Error).message}
           </p>
+        )}
+        {a.status === "shortlisted" && a.interview_scheduled_at && (
+          <div className="mt-3 rounded-md bg-stone-50 p-3 text-xs text-stone-600">
+            <strong>Interview scheduled:</strong>{" "}
+            {new Date(a.interview_scheduled_at).toLocaleString("en-NG", {
+              dateStyle: "medium",
+              timeStyle: "short",
+            })}{" "}
+            at {a.interview_location}
+          </div>
+        )}
+        {a.status === "hired" && a.resume_date && (
+          <div className="mt-3 rounded-md bg-green-50 p-3 text-xs text-green-800">
+            <strong>Resume date:</strong>{" "}
+            {new Date(a.resume_date).toLocaleDateString("en-NG", {
+              dateStyle: "medium",
+            })}
+          </div>
         )}
       </section>
 
@@ -233,6 +298,16 @@ export default function ApplicationDetailPage({
         </section>
       )}
 
+      {/* Interview scoring */}
+      {["interviewed", "hired", "rejected"].includes(a.status) && (
+        <InterviewScoreSection
+          existingScore={scoreQuery.data ?? null}
+          onSave={(payload) => scoreMut.mutate(payload)}
+          saving={scoreMut.isPending}
+          error={scoreMut.isError ? (scoreMut.error as Error).message : null}
+        />
+      )}
+
       {/* Internal notes */}
       <section className="rounded-lg border border-stone-200 bg-white p-6">
         <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-stone-500">
@@ -264,7 +339,315 @@ export default function ApplicationDetailPage({
           </button>
         </div>
       </section>
+
+      {showShortlistModal && (
+        <ShortlistModal
+          onClose={() => setShowShortlistModal(false)}
+          onSubmit={(vars) => shortlistMut.mutate(vars)}
+          pending={shortlistMut.isPending}
+          error={shortlistMut.isError ? (shortlistMut.error as Error).message : null}
+        />
+      )}
+
+      {showHireModal && (
+        <HireModal
+          onClose={() => setShowHireModal(false)}
+          onSubmit={(vars) => hireMut.mutate(vars)}
+          pending={hireMut.isPending}
+          error={hireMut.isError ? (hireMut.error as Error).message : null}
+        />
+      )}
     </div>
+  );
+}
+
+function ShortlistModal({
+  onClose,
+  onSubmit,
+  pending,
+  error,
+}: {
+  onClose: () => void;
+  onSubmit: (vars: { interview_scheduled_at: string; interview_location: string }) => void;
+  pending: boolean;
+  error: string | null;
+}) {
+  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const form = new FormData(e.currentTarget);
+    const date = form.get("interview_date") as string;
+    const time = form.get("interview_time") as string;
+    onSubmit({
+      interview_scheduled_at: new Date(`${date}T${time}`).toISOString(),
+      interview_location: form.get("interview_location") as string,
+    });
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-stone-900/40 p-4">
+      <div className="w-full max-w-md rounded-lg bg-white shadow-xl">
+        <header className="flex items-center justify-between border-b border-stone-100 px-6 py-4">
+          <h2 className="text-base font-semibold text-stone-900">Schedule interview</h2>
+          <button
+            onClick={onClose}
+            className="rounded-md p-1 text-stone-400 hover:bg-stone-100 hover:text-stone-700"
+            aria-label="Close"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </header>
+        <form onSubmit={handleSubmit} className="space-y-4 p-6">
+          <p className="text-xs text-stone-600">
+            The applicant will automatically receive an email with these details.
+          </p>
+          <div className="grid grid-cols-2 gap-4">
+            <ModalField label="Date" required>
+              <input
+                name="interview_date"
+                type="date"
+                required
+                className="w-full rounded-md border border-stone-300 bg-white px-3 py-2 text-sm focus:border-amber-700 focus:outline-none"
+              />
+            </ModalField>
+            <ModalField label="Time" required>
+              <input
+                name="interview_time"
+                type="time"
+                required
+                className="w-full rounded-md border border-stone-300 bg-white px-3 py-2 text-sm focus:border-amber-700 focus:outline-none"
+              />
+            </ModalField>
+          </div>
+          <ModalField label="Location / format" required>
+            <input
+              name="interview_location"
+              required
+              placeholder="Lead Mall, Ring Road outlet — or a video call link"
+              className="w-full rounded-md border border-stone-300 bg-white px-3 py-2 text-sm focus:border-amber-700 focus:outline-none"
+            />
+          </ModalField>
+          {error && <p className="text-xs text-red-600">{error}</p>}
+          <div className="flex justify-end gap-2 border-t border-stone-100 pt-4">
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-md border border-stone-300 bg-white px-4 py-2 text-sm font-medium text-stone-700 hover:bg-stone-50"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={pending}
+              className="rounded-md bg-amber-700 px-4 py-2 text-sm font-medium text-white hover:bg-amber-800 disabled:opacity-50"
+            >
+              {pending ? "Sending…" : "Shortlist & send email"}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+function HireModal({
+  onClose,
+  onSubmit,
+  pending,
+  error,
+}: {
+  onClose: () => void;
+  onSubmit: (vars: { resume_date: string }) => void;
+  pending: boolean;
+  error: string | null;
+}) {
+  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const form = new FormData(e.currentTarget);
+    onSubmit({ resume_date: form.get("resume_date") as string });
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-stone-900/40 p-4">
+      <div className="w-full max-w-md rounded-lg bg-white shadow-xl">
+        <header className="flex items-center justify-between border-b border-stone-100 px-6 py-4">
+          <h2 className="text-base font-semibold text-stone-900">Mark as hired</h2>
+          <button
+            onClick={onClose}
+            className="rounded-md p-1 text-stone-400 hover:bg-stone-100 hover:text-stone-700"
+            aria-label="Close"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </header>
+        <form onSubmit={handleSubmit} className="space-y-4 p-6">
+          <p className="text-xs text-stone-600">
+            The applicant will automatically receive a success email with this resumption
+            date.
+          </p>
+          <ModalField label="Resume date" required>
+            <input
+              name="resume_date"
+              type="date"
+              required
+              className="w-full rounded-md border border-stone-300 bg-white px-3 py-2 text-sm focus:border-amber-700 focus:outline-none"
+            />
+          </ModalField>
+          {error && <p className="text-xs text-red-600">{error}</p>}
+          <div className="flex justify-end gap-2 border-t border-stone-100 pt-4">
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-md border border-stone-300 bg-white px-4 py-2 text-sm font-medium text-stone-700 hover:bg-stone-50"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={pending}
+              className="rounded-md bg-green-700 px-4 py-2 text-sm font-medium text-white hover:bg-green-800 disabled:opacity-50"
+            >
+              {pending ? "Sending…" : "Hire & send email"}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+function ModalField({
+  label,
+  required,
+  children,
+}: {
+  label: string;
+  required?: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <label className="block">
+      <span className="mb-1 block text-xs font-medium text-stone-600">
+        {label}
+        {required && <span className="ml-0.5 text-red-600">*</span>}
+      </span>
+      {children}
+    </label>
+  );
+}
+
+const SCORE_CRITERIA: { key: keyof InterviewScorePayload; label: string }[] = [
+  { key: "communication_score", label: "Communication" },
+  { key: "role_knowledge_score", label: "Role knowledge" },
+  { key: "reliability_score", label: "Reliability / integrity" },
+  { key: "culture_fit_score", label: "Culture fit" },
+];
+
+function InterviewScoreSection({
+  existingScore,
+  onSave,
+  saving,
+  error,
+}: {
+  existingScore: {
+    communication_score: number;
+    role_knowledge_score: number;
+    reliability_score: number;
+    culture_fit_score: number;
+    overall_comment: string | null;
+  } | null;
+  onSave: (payload: InterviewScorePayload) => void;
+  saving: boolean;
+  error: string | null;
+}) {
+  const [scores, setScores] = useState<Record<string, number>>({
+    communication_score: existingScore?.communication_score ?? 3,
+    role_knowledge_score: existingScore?.role_knowledge_score ?? 3,
+    reliability_score: existingScore?.reliability_score ?? 3,
+    culture_fit_score: existingScore?.culture_fit_score ?? 3,
+  });
+  const [comment, setComment] = useState(existingScore?.overall_comment ?? "");
+
+  useEffect(() => {
+    if (existingScore) {
+      setScores({
+        communication_score: existingScore.communication_score,
+        role_knowledge_score: existingScore.role_knowledge_score,
+        reliability_score: existingScore.reliability_score,
+        culture_fit_score: existingScore.culture_fit_score,
+      });
+      setComment(existingScore.overall_comment ?? "");
+    }
+  }, [existingScore]);
+
+  const average =
+    Object.values(scores).reduce((sum, v) => sum + v, 0) / Object.values(scores).length;
+
+  return (
+    <section className="rounded-lg border border-stone-200 bg-white p-6">
+      <h2 className="mb-3 flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-stone-500">
+        <span>Interview scoring</span>
+        {existingScore && (
+          <span className="text-amber-700">Avg {average.toFixed(1)} / 5</span>
+        )}
+      </h2>
+      <div className="space-y-4">
+        {SCORE_CRITERIA.map((criterion) => (
+          <div key={criterion.key} className="flex items-center justify-between gap-4">
+            <span className="text-sm text-stone-700">{criterion.label}</span>
+            <div className="flex gap-1">
+              {[1, 2, 3, 4, 5].map((n) => (
+                <button
+                  key={n}
+                  type="button"
+                  onClick={() => setScores((prev) => ({ ...prev, [criterion.key]: n }))}
+                  className="p-0.5"
+                  aria-label={`${criterion.label}: ${n}`}
+                >
+                  <Star
+                    className={`h-5 w-5 ${
+                      n <= scores[criterion.key]
+                        ? "fill-amber-500 text-amber-500"
+                        : "text-stone-300"
+                    }`}
+                  />
+                </button>
+              ))}
+            </div>
+          </div>
+        ))}
+        <div>
+          <label className="mb-1 block text-xs font-medium text-stone-600">
+            Overall comment
+          </label>
+          <textarea
+            value={comment}
+            onChange={(e) => setComment(e.target.value)}
+            rows={3}
+            placeholder="Interview impressions, strengths, concerns…"
+            className="w-full rounded-md border border-stone-300 bg-white px-3 py-2 text-sm focus:border-amber-700 focus:outline-none"
+          />
+        </div>
+        {error && <p className="text-xs text-red-600">{error}</p>}
+        <div className="flex justify-end">
+          <button
+            onClick={() =>
+              onSave({
+                communication_score: scores.communication_score,
+                role_knowledge_score: scores.role_knowledge_score,
+                reliability_score: scores.reliability_score,
+                culture_fit_score: scores.culture_fit_score,
+                overall_comment: comment || undefined,
+              })
+            }
+            disabled={saving}
+            className="inline-flex items-center gap-1.5 rounded-md bg-amber-700 px-3 py-1.5 text-xs font-medium text-white hover:bg-amber-800 disabled:opacity-50"
+          >
+            <Save className="h-3.5 w-3.5" />
+            {saving ? "Saving…" : existingScore ? "Update score" : "Save score"}
+          </button>
+        </div>
+      </div>
+    </section>
   );
 }
 

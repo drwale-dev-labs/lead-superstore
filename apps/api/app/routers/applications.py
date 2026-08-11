@@ -3,7 +3,8 @@ from uuid import UUID, uuid4
 from fastapi import APIRouter, File, Form, HTTPException, Query, UploadFile, status
 
 from app.core.db import get_supabase
-from app.schemas.job import ApplicationCreate, ApplicationUpdate
+from app.schemas.job import ApplicationCreate, ApplicationUpdate, InterviewScoreCreate
+from app.services import email as email_service
 
 APPLICATION_DOCUMENT_MIME_TYPES = {"image/jpeg", "image/png", "application/pdf"}
 MAX_APPLICATION_DOCUMENT_SIZE_BYTES = 5 * 1024 * 1024  # 5 MB
@@ -86,12 +87,44 @@ def get_application(application_id: UUID):
 
 @admin_router.patch("/{application_id}")
 def update_application(application_id: UUID, payload: ApplicationUpdate):
-    """Move application through the hiring pipeline."""
+    """Move application through the hiring pipeline.
+
+    Moving to 'shortlisted' requires interview_scheduled_at + interview_location
+    and auto-sends the shortlist email. Moving to 'hired' requires resume_date
+    and auto-sends the hire email. Moving to 'rejected' auto-sends the rejection
+    email. Email failures are surfaced as a 502 — the status change is not
+    rolled back, since the DB write already succeeded; HR can see the status
+    updated and retry notifying the candidate manually if needed.
+    """
     supabase = get_supabase()
+
+    if payload.status == "shortlisted" and (
+        not payload.interview_scheduled_at or not payload.interview_location
+    ):
+        raise HTTPException(
+            status_code=400,
+            detail="interview_scheduled_at and interview_location are required to shortlist",
+        )
+    if payload.status == "hired" and not payload.resume_date:
+        raise HTTPException(
+            status_code=400, detail="resume_date is required to mark an applicant as hired"
+        )
 
     update_data = payload.model_dump(mode="json", exclude_none=True)
     if not update_data:
         raise HTTPException(status_code=400, detail="No fields to update")
+
+    existing = (
+        supabase.table("applications")
+        .select("first_name, last_name, email, job_postings(title)")
+        .eq("id", str(application_id))
+        .execute()
+    )
+    if not existing.data:
+        raise HTTPException(status_code=404, detail="Application not found")
+    applicant = existing.data[0]
+    applicant_name = f"{applicant['first_name']} {applicant['last_name']}"
+    job_title = (applicant.get("job_postings") or {}).get("title", "the role")
 
     response = (
         supabase.table("applications")
@@ -102,6 +135,85 @@ def update_application(application_id: UUID, payload: ApplicationUpdate):
 
     if not response.data:
         raise HTTPException(status_code=404, detail="Application not found")
+
+    updated = response.data[0]
+
+    try:
+        if payload.status == "shortlisted":
+            email_service.send_shortlisted_email(
+                to_email=applicant["email"],
+                applicant_name=applicant_name,
+                job_title=job_title,
+                interview_scheduled_at=updated["interview_scheduled_at"],
+                interview_location=updated["interview_location"],
+            )
+        elif payload.status == "hired":
+            email_service.send_hired_email(
+                to_email=applicant["email"],
+                applicant_name=applicant_name,
+                job_title=job_title,
+                resume_date=updated["resume_date"],
+            )
+        elif payload.status == "rejected":
+            email_service.send_rejected_email(
+                to_email=applicant["email"],
+                applicant_name=applicant_name,
+                job_title=job_title,
+            )
+    except Exception as e:
+        raise HTTPException(
+            status_code=502,
+            detail=f"Status updated, but the notification email failed to send: {str(e)}",
+        )
+
+    return updated
+
+
+@admin_router.get("/{application_id}/interview-score")
+def get_interview_score(application_id: UUID):
+    """Fetch the interview score for an application, if one has been recorded."""
+    supabase = get_supabase()
+    response = (
+        supabase.table("interview_scores")
+        .select("*")
+        .eq("application_id", str(application_id))
+        .execute()
+    )
+    if not response.data:
+        raise HTTPException(status_code=404, detail="No interview score recorded yet")
+    return response.data[0]
+
+
+@admin_router.put("/{application_id}/interview-score")
+def upsert_interview_score(application_id: UUID, payload: InterviewScoreCreate):
+    """Record or update the interview score for an application."""
+    supabase = get_supabase()
+
+    app_check = (
+        supabase.table("applications").select("id").eq("id", str(application_id)).execute()
+    )
+    if not app_check.data:
+        raise HTTPException(status_code=404, detail="Application not found")
+
+    existing = (
+        supabase.table("interview_scores")
+        .select("id")
+        .eq("application_id", str(application_id))
+        .execute()
+    )
+
+    data = payload.model_dump(mode="json", exclude_none=True)
+    data["application_id"] = str(application_id)
+
+    if existing.data:
+        response = (
+            supabase.table("interview_scores")
+            .update(data)
+            .eq("application_id", str(application_id))
+            .execute()
+        )
+    else:
+        response = supabase.table("interview_scores").insert(data).execute()
 
     return response.data[0]
 

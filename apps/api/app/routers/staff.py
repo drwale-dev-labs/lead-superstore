@@ -1,9 +1,11 @@
+from datetime import date, datetime, timezone
 from uuid import UUID
 
 from fastapi import APIRouter, HTTPException, Query, status
 
 from app.core.db import get_supabase
 from app.schemas.staff import StaffCreate, StaffUpdate
+from app.services import training_bond
 
 router = APIRouter()
 
@@ -143,13 +145,20 @@ def activate_staff(staff_id: UUID):
     return response.data[0]
 
 
-@router.delete("/{staff_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{staff_id}", status_code=status.HTTP_200_OK)
 def delete_staff(staff_id: UUID):
-    """Soft-delete by setting status='terminated'. Hard delete is not allowed."""
+    """Soft-delete by setting status='terminated'. Hard delete is not allowed.
+
+    If the staff member has an active training bond, this forfeits it (if
+    they left within the first 6 months) or flags the outstanding payback
+    balance for manual HR review (if they left during months 7-12) — the
+    balance is never auto-paid out.
+    """
     supabase = get_supabase()
+    terminated_at = datetime.now(timezone.utc)
     response = (
         supabase.table("staff")
-        .update({"status": "terminated", "terminated_at": "now()"})
+        .update({"status": "terminated", "terminated_at": terminated_at.isoformat()})
         .eq("id", str(staff_id))
         .execute()
     )
@@ -157,4 +166,8 @@ def delete_staff(staff_id: UUID):
     if not response.data:
         raise HTTPException(status_code=404, detail="Staff member not found")
 
-    return None
+    bond_result = training_bond.check_bond_on_termination(
+        supabase, staff_id, terminated_at.date()
+    )
+
+    return {"staff": response.data[0], "training_bond": bond_result}
