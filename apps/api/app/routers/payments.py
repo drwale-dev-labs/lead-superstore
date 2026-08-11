@@ -20,10 +20,11 @@ router = APIRouter()
 
 @router.post("/initialize", response_model=InitializePaymentResponse)
 def initialize_payment(payload: InitializePaymentRequest):
-    """Start a Paystack transaction for an order's subtotal + total.
+    """Start a Paystack transaction for an order's total.
 
-    Only orders still in 'pending_payment' can be paid. Delivery fee (if any)
-    is confirmed by the outlet separately and collected outside this flow.
+    Only orders still in 'pending_payment' can be paid. `total` already
+    includes subtotal + delivery fee (delivery orders only) + service charge,
+    computed atomically at order creation.
     """
     supabase = get_supabase()
 

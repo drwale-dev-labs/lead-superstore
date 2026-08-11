@@ -64,15 +64,26 @@ export default function OrderConfirmationPage({
             </li>
           ))}
         </ul>
-        <div className="mt-3 flex justify-between border-t border-stone-100 pt-3 text-sm font-semibold text-stone-900">
-          <span>Total</span>
-          <span>{formatNaira(Number(order.total))}</span>
+        <div className="mt-3 space-y-1 border-t border-stone-100 pt-3 text-sm">
+          <div className="flex justify-between text-stone-600">
+            <span>Subtotal</span>
+            <span>{formatNaira(Number(order.subtotal))}</span>
+          </div>
+          {order.fulfillment_method === "delivery" && (
+            <div className="flex justify-between text-stone-600">
+              <span>Delivery fee</span>
+              <span>{formatNaira(Number(order.delivery_fee))}</span>
+            </div>
+          )}
+          <div className="flex justify-between text-stone-600">
+            <span>Service charge</span>
+            <span>{formatNaira(Number(order.service_charge))}</span>
+          </div>
+          <div className="flex justify-between border-t border-stone-100 pt-1 font-semibold text-stone-900">
+            <span>Total</span>
+            <span>{formatNaira(Number(order.total))}</span>
+          </div>
         </div>
-        {order.fulfillment_method === "delivery" && (
-          <p className="mt-1 text-[11px] text-stone-500">
-            Delivery fee to be confirmed and added by the outlet.
-          </p>
-        )}
       </div>
 
       {/* Payment */}
@@ -135,7 +146,7 @@ export default function OrderConfirmationPage({
         <strong>What happens next:</strong> our team at {order.outlets?.name} will
         review your order
         {order.fulfillment_method === "delivery"
-          ? " and call you to confirm the delivery fee and schedule."
+          ? " and call you to confirm the delivery schedule."
           : " and text or call you once it's ready for pickup."}{" "}
         {order.status === "pending_payment"
           ? "Complete payment above to confirm your order."

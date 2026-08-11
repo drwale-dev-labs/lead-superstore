@@ -39,8 +39,8 @@ export function PaymentButton({ orderId }: { orderId: string }) {
       </button>
       {error && <p className="mt-2 text-xs text-red-600">{error}</p>}
       <p className="mt-2 text-center text-[11px] text-stone-500">
-        Secured by Paystack. Delivery fee, if any, is collected separately after
-        confirmation.
+        Secured by Paystack. Delivery fee and service charge are already
+        included in the amount above.
       </p>
     </div>
   );

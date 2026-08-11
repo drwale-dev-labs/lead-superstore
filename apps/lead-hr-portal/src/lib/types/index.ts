@@ -500,6 +500,7 @@ export const OrderSchema = z.object({
   delivery_notes: z.string().nullable(),
   subtotal: z.number(),
   delivery_fee: z.number(),
+  service_charge: z.number(),
   total: z.number(),
   status: OrderStatusEnum,
   payment_reference: z.string().nullable(),

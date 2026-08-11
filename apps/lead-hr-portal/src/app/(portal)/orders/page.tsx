@@ -50,8 +50,9 @@ export default function OrdersPage() {
   return (
     <div className="space-y-6">
       <p className="text-sm text-stone-600">
-        Orders placed through the online store. Confirm, set delivery fees, and
-        progress each order through fulfillment.
+        Orders placed through the online store. Delivery fee and service charge
+        are calculated automatically at checkout — confirm and progress each
+        order through fulfillment below.
       </p>
 
       {/* Filters */}

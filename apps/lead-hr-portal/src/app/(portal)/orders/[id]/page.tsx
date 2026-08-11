@@ -139,9 +139,15 @@ export default function OrderDetailPage({
             <span>Subtotal</span>
             <span>{formatNaira(Number(order.subtotal))}</span>
           </div>
+          {isDelivery && (
+            <div className="flex justify-between text-stone-600">
+              <span>Delivery fee</span>
+              <span>{formatNaira(Number(order.delivery_fee))}</span>
+            </div>
+          )}
           <div className="flex justify-between text-stone-600">
-            <span>Delivery fee</span>
-            <span>{formatNaira(Number(order.delivery_fee))}</span>
+            <span>Service charge</span>
+            <span>{formatNaira(Number(order.service_charge))}</span>
           </div>
           <div className="flex justify-between border-t border-stone-100 pt-1 font-semibold text-stone-900">
             <span>Total</span>
@@ -179,7 +185,7 @@ export default function OrderDetailPage({
             <div className="flex items-end gap-2 rounded-md bg-stone-50 p-3">
               <div className="flex-1">
                 <label className="mb-1 block text-xs font-medium text-stone-600">
-                  Delivery fee (₦)
+                  Delivery fee override (₦)
                 </label>
                 <input
                   type="number"

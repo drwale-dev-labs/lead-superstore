@@ -217,7 +217,9 @@ def update_order(order_id: UUID, payload: OrderAdminUpdate):
                 status_code=400, detail="Delivery fee only applies to delivery orders"
             )
         update_data["delivery_fee"] = payload.delivery_fee
-        update_data["total"] = float(order["subtotal"]) + payload.delivery_fee
+        update_data["total"] = (
+            float(order["subtotal"]) + payload.delivery_fee + float(order["service_charge"])
+        )
 
     if payload.status is not None:
         update_data["status"] = payload.status

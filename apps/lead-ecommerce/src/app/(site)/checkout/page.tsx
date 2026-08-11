@@ -10,6 +10,9 @@ import { useOutlet } from "@/lib/outlet-context";
 import { createOrder } from "@/lib/api/orders";
 import { formatNaira } from "@/lib/types";
 
+const DELIVERY_FEE = 1150;
+const SERVICE_CHARGE = 125;
+
 export default function CheckoutPage() {
   const router = useRouter();
   const { items, subtotal, outletId, clearCart } = useCart();
@@ -182,9 +185,9 @@ export default function CheckoutPage() {
             {method === "delivery" && (
               <div className="mt-4 space-y-4">
                 <div className="rounded-md border border-blue-200 bg-blue-50 p-3 text-xs text-blue-800">
-                  Delivery fees are not calculated at checkout. Our team at{" "}
-                  {cartOutlet.name} will call you shortly after placing this order to
-                  confirm the delivery fee and timing.
+                  A flat delivery fee of {formatNaira(DELIVERY_FEE)} applies. Our
+                  team at {cartOutlet.name} will call you to confirm timing after
+                  your order is placed.
                 </div>
                 <Field label="Delivery address" required>
                   <textarea
@@ -239,15 +242,30 @@ export default function CheckoutPage() {
               </li>
             ))}
           </ul>
-          <div className="mt-4 flex items-center justify-between border-t border-stone-100 pt-3 text-sm font-semibold text-stone-900">
-            <span>Subtotal</span>
-            <span>{formatNaira(subtotal)}</span>
+          <div className="mt-4 space-y-1 border-t border-stone-100 pt-3 text-sm">
+            <div className="flex items-center justify-between text-stone-600">
+              <span>Subtotal</span>
+              <span>{formatNaira(subtotal)}</span>
+            </div>
+            {method === "delivery" && (
+              <div className="flex items-center justify-between text-stone-600">
+                <span>Delivery fee</span>
+                <span>{formatNaira(DELIVERY_FEE)}</span>
+              </div>
+            )}
+            <div className="flex items-center justify-between text-stone-600">
+              <span>Service charge</span>
+              <span>{formatNaira(SERVICE_CHARGE)}</span>
+            </div>
+            <div className="flex items-center justify-between border-t border-stone-100 pt-1 font-semibold text-stone-900">
+              <span>Total</span>
+              <span>
+                {formatNaira(
+                  subtotal + (method === "delivery" ? DELIVERY_FEE : 0) + SERVICE_CHARGE,
+                )}
+              </span>
+            </div>
           </div>
-          {method === "delivery" && (
-            <p className="mt-1 text-[11px] text-stone-500">
-              + delivery fee, confirmed after checkout
-            </p>
-          )}
 
           <button
             type="submit"
