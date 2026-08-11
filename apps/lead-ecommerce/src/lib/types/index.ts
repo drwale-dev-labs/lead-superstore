@@ -130,7 +130,11 @@ export const OrderSchema = z.object({
   paid_at: z.string().nullable().optional(),
   created_at: z.string(),
   outlets: z
-    .object({ name: z.string(), city: z.string().nullable(), phone: z.string().nullable() })
+    .object({
+      name: z.string(),
+      city: z.string().nullable(),
+      phone: z.string().nullable().optional(),
+    })
     .nullable()
     .optional(),
   customers: z

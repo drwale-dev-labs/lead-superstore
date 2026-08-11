@@ -155,8 +155,8 @@ function LoansList({ query }: { query: ReturnType<typeof useQuery<Loan[]>> }) {
                 <div className="font-medium text-stone-900">
                   {l.staff?.first_name} {l.staff?.last_name}
                 </div>
-                {l.reason && (
-                  <div className="mt-0.5 text-xs text-stone-500">{l.reason}</div>
+                {l.notes && (
+                  <div className="mt-0.5 text-xs text-stone-500">{l.notes}</div>
                 )}
               </td>
               <td className="px-4 py-3 text-right text-stone-700">

@@ -379,7 +379,7 @@ export const LoanSchema = z.object({
   balance: z.number(),
   monthly_installment: z.number(),
   status: z.enum(["active", "paid_off", "cancelled"]),
-  reason: z.string().nullable(),
+  notes: z.string().nullable(),
   approved_at: z.string().nullable(),
   created_at: z.string(),
   staff: StaffMiniSchema,
@@ -440,7 +440,7 @@ export const SalaryStructureSchema = z.object({
   gross_salary: z.number(),
   effective_from: z.string(),
   effective_to: z.string().nullable(),
-  notes: z.string().nullable(),
+  notes: z.string().nullable().optional(),
   created_at: z.string(),
   staff: z
     .object({
@@ -500,7 +500,11 @@ export const OrderSchema = z.object({
   created_at: z.string(),
   updated_at: z.string(),
   outlets: z
-    .object({ name: z.string(), city: z.string().nullable(), phone: z.string().nullable() })
+    .object({
+      name: z.string(),
+      city: z.string().nullable(),
+      phone: z.string().nullable().optional(),
+    })
     .nullable()
     .optional(),
   customers: z

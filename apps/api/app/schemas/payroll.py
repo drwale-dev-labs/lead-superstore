@@ -14,6 +14,7 @@ class SalaryStructureCreate(BaseModel):
     staff_id: UUID
     gross_salary: Decimal = Field(..., gt=0)
     effective_from: date
+    notes: str | None = None
 
 
 class SalaryStructure(BaseModel):

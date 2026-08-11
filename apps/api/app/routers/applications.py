@@ -38,7 +38,7 @@ def get_application(application_id: UUID):
     supabase = get_supabase()
     response = (
         supabase.table("applications")
-        .select("*, job_postings(title, outlets(name))")
+        .select("*, job_postings(title, outlet_id, outlets(name))")
         .eq("id", str(application_id))
         .single()
         .execute()

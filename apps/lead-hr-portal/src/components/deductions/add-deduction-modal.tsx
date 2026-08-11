@@ -90,7 +90,7 @@ export function AddDeductionModal({ type, open, onClose }: Props) {
         monthly_installment: parseFloat(
           form.get("monthly_installment") as string,
         ),
-        reason,
+        notes: reason,
       });
     } else if (type === "advance") {
       advanceMut.mutate({ staff_id, amount, reason });

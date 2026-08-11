@@ -27,7 +27,7 @@ export type CreateLoanPayload = {
   staff_id: string;
   principal: number;
   monthly_installment: number;
-  reason?: string;
+  notes?: string;
 };
 
 export async function createLoan(payload: CreateLoanPayload): Promise<Loan> {
@@ -37,7 +37,7 @@ export async function createLoan(payload: CreateLoanPayload): Promise<Loan> {
 
 export async function updateLoan(
   id: string,
-  payload: { status?: string; monthly_installment?: number; reason?: string },
+  payload: { status?: string; monthly_installment?: number; notes?: string },
 ): Promise<Loan> {
   const { data } = await apiClient.patch(`/api/deductions/loans/${id}`, payload);
   return LoanSchema.parse(data);
