@@ -39,18 +39,45 @@ def months_elapsed(hired_at: date, as_of: date) -> int:
     return max(months, 0) + 1
 
 
-def get_or_create_bond(supabase, staff_id: UUID, hired_at: date) -> dict | None:
-    """Return the staff member's active training bond, creating it if this is
-    their first payroll run and they're eligible. Returns None if ineligible.
+def fetch_bonds_for_staff(supabase, staff_ids: list[str]) -> dict[str, dict]:
+    """Batch-fetch existing training bonds for a list of staff IDs, keyed by
+    staff_id. Meant to be called ONCE per payroll generation run and passed
+    into get_or_create_bond for each staff member, to avoid an N+1 query.
     """
-    existing = (
+    if not staff_ids:
+        return {}
+    resp = (
         supabase.table("training_bonds")
         .select("*")
-        .eq("staff_id", str(staff_id))
+        .in_("staff_id", staff_ids)
         .execute()
     )
-    if existing.data:
-        return existing.data[0]
+    return {row["staff_id"]: row for row in resp.data}
+
+
+def get_or_create_bond(
+    supabase, staff_id: UUID, hired_at: date, existing_bonds: dict[str, dict] | None = None
+) -> dict | None:
+    """Return the staff member's active training bond, creating it if this is
+    their first payroll run and they're eligible. Returns None if ineligible.
+
+    `existing_bonds` (from fetch_bonds_for_staff) lets the caller avoid a
+    per-staff lookup query across a batch of staff; falls back to a live
+    lookup if not supplied.
+    """
+    if existing_bonds is not None:
+        existing = existing_bonds.get(str(staff_id))
+    else:
+        resp = (
+            supabase.table("training_bonds")
+            .select("*")
+            .eq("staff_id", str(staff_id))
+            .execute()
+        )
+        existing = resp.data[0] if resp.data else None
+
+    if existing:
+        return existing
 
     if not is_eligible_for_bond(hired_at):
         return None

@@ -67,39 +67,47 @@ def compute_net_salary(
 # ============================================================================
 
 
-def find_backdated_periods(
-    supabase, staff_id: str, outlet_id: str, hired_at: date
-) -> list[dict]:
-    """Find prior GENERATED periods (for this staff's outlet) where hired_at
-    falls within the period but this staff has no payroll entry at all.
+def fetch_prior_generated_periods(supabase, outlet_id: str, before: date) -> list[dict]:
+    """Fetch every non-draft period for this outlet starting on/before `before`.
 
-    Detection only — never auto-included in any total. HR reviews and
-    explicitly approves each catch-up via add_catch_up_item.
+    Meant to be called ONCE per generation run (not per staff) and passed into
+    find_backdated_periods for each staff member, to avoid an N+1 query pattern.
     """
-    prior_periods = (
+    resp = (
         supabase.table("payroll_periods")
         .select("id, period_start, period_end, status")
         .eq("outlet_id", outlet_id)
-        .lte("period_start", hired_at.isoformat())
+        .lte("period_start", before.isoformat())
         .neq("status", "draft")
         .execute()
     )
+    return resp.data
 
+
+def find_backdated_periods(
+    prior_periods: list[dict],
+    staff_id: str,
+    hired_at: date,
+    entries_by_period_and_staff: set[tuple[str, str]],
+) -> list[dict]:
+    """Find prior GENERATED periods where hired_at falls within the period but
+    this staff has no payroll entry at all.
+
+    Detection only — never auto-included in any total. HR reviews and
+    explicitly approves each catch-up via add_catch_up_item.
+
+    `prior_periods` and `entries_by_period_and_staff` are pre-fetched once per
+    generation run (see fetch_prior_generated_periods /
+    fetch_existing_entry_keys) rather than queried per staff, to avoid N+1s.
+    """
     missing: list[dict] = []
-    for period in prior_periods.data:
+    for period in prior_periods:
         period_start = date.fromisoformat(period["period_start"])
         period_end = date.fromisoformat(period["period_end"])
         if hired_at > period_end:
             continue
 
-        existing_entry = (
-            supabase.table("payroll_entries")
-            .select("id")
-            .eq("period_id", period["id"])
-            .eq("staff_id", staff_id)
-            .execute()
-        )
-        if existing_entry.data:
+        if (period["id"], staff_id) in entries_by_period_and_staff:
             continue
 
         days_owed = calendar_days_worked_in_period(period_start, period_end, hired_at, None)
@@ -114,6 +122,24 @@ def find_backdated_periods(
             )
 
     return missing
+
+
+def fetch_existing_entry_keys(
+    supabase, period_ids: list[str], staff_ids: list[str]
+) -> set[tuple[str, str]]:
+    """Batch-fetch (period_id, staff_id) pairs that already have a payroll
+    entry, across all prior periods and staff in one generation run.
+    """
+    if not period_ids or not staff_ids:
+        return set()
+    resp = (
+        supabase.table("payroll_entries")
+        .select("period_id, staff_id")
+        .in_("period_id", period_ids)
+        .in_("staff_id", staff_ids)
+        .execute()
+    )
+    return {(row["period_id"], row["staff_id"]) for row in resp.data}
 
 
 def already_has_catch_up(supabase, staff_id: str, missed_period_id: str) -> bool:

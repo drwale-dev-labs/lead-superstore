@@ -1,10 +1,12 @@
-from datetime import date
+from datetime import date, timedelta
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Query
 
 from app.core.db import get_supabase
 
 router = APIRouter()
+
+DEFAULT_SALES_WINDOW_DAYS = 365
 
 
 @router.get("/headcount")
@@ -134,11 +136,18 @@ def turnover_report():
 
 
 @router.get("/sales")
-def sales_report():
+def sales_report(days: int = Query(DEFAULT_SALES_WINDOW_DAYS, ge=1, le=3650)):
+    """Sales totals over a trailing window (default last 365 days).
+
+    Bounded to avoid re-fetching the entire orders table on every load as
+    order volume grows — pass ?days= to widen or narrow the window.
+    """
     supabase = get_supabase()
+    since = (date.today() - timedelta(days=days)).isoformat()
     orders = (
         supabase.table("orders")
         .select("status, total, fulfillment_method, fulfillment_outlet_id, created_at, outlets(name)")
+        .gte("created_at", since)
         .execute()
         .data
     )

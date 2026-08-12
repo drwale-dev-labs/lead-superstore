@@ -21,6 +21,8 @@ from app.services.payroll import (
     already_has_catch_up,
     calendar_days_worked_in_period,
     compute_net_salary,
+    fetch_existing_entry_keys,
+    fetch_prior_generated_periods,
     find_backdated_periods,
 )
 from app.services import training_bond
@@ -218,6 +220,79 @@ def generate_payroll_entries(period_id: UUID):
         .execute()
     )
     staff_list = active_staff_resp.data + terminated_staff_resp.data
+    staff_ids = [s["id"] for s in staff_list]
+
+    # === Batch-fetch everything the per-staff loop needs, in one round trip
+    # each, instead of issuing 5-7+ queries per staff (was an N+1 pattern). ===
+    structures_resp = (
+        supabase.table("salary_structures")
+        .select("*")
+        .in_("staff_id", staff_ids)
+        .lte("effective_from", period_end)
+        .order("effective_from", desc=True)
+        .execute()
+        if staff_ids
+        else None
+    )
+    structures_by_staff: dict[str, list[dict]] = defaultdict(list)
+    for s in (structures_resp.data if structures_resp else []):
+        structures_by_staff[s["staff_id"]].append(s)
+
+    loans_resp = (
+        supabase.table("loans")
+        .select("*")
+        .in_("staff_id", staff_ids)
+        .eq("status", "active")
+        .execute()
+        if staff_ids
+        else None
+    )
+    loans_by_staff: dict[str, list[dict]] = defaultdict(list)
+    for loan in (loans_resp.data if loans_resp else []):
+        loans_by_staff[loan["staff_id"]].append(loan)
+
+    advances_resp = (
+        supabase.table("salary_advances")
+        .select("*")
+        .in_("staff_id", staff_ids)
+        .eq("status", "pending")
+        .execute()
+        if staff_ids
+        else None
+    )
+    advances_by_staff: dict[str, list[dict]] = defaultdict(list)
+    for adv in (advances_resp.data if advances_resp else []):
+        advances_by_staff[adv["staff_id"]].append(adv)
+
+    fines_resp = (
+        supabase.table("fines")
+        .select("*")
+        .in_("staff_id", staff_ids)
+        .eq("status", "approved")
+        .execute()
+        if staff_ids
+        else None
+    )
+    fines_by_staff: dict[str, list[dict]] = defaultdict(list)
+    for fine in (fines_resp.data if fines_resp else []):
+        fines_by_staff[fine["staff_id"]].append(fine)
+
+    bonds_by_staff = training_bond.fetch_bonds_for_staff(supabase, staff_ids)
+
+    hired_staff_ids = [s["id"] for s in staff_list if s.get("hired_at")]
+    earliest_hired_at = (
+        min(date.fromisoformat(s["hired_at"]) for s in staff_list if s.get("hired_at"))
+        if hired_staff_ids
+        else None
+    )
+    prior_periods = (
+        fetch_prior_generated_periods(supabase, outlet_id, earliest_hired_at)
+        if earliest_hired_at
+        else []
+    )
+    existing_entry_keys = fetch_existing_entry_keys(
+        supabase, [p["id"] for p in prior_periods], hired_staff_ids
+    )
 
     total_gross = Decimal("0")
     total_net = Decimal("0")
@@ -226,18 +301,10 @@ def generate_payroll_entries(period_id: UUID):
 
     for staff in staff_list:
         # Find active salary structure
-        structures = (
-            supabase.table("salary_structures")
-            .select("*")
-            .eq("staff_id", staff["id"])
-            .lte("effective_from", period_end)
-            .order("effective_from", desc=True)
-            .execute()
-        )
         active = next(
             (
                 s
-                for s in structures.data
+                for s in structures_by_staff.get(staff["id"], [])
                 if s["effective_to"] is None or s["effective_to"] >= period_end
             ),
             None,
@@ -270,14 +337,7 @@ def generate_payroll_entries(period_id: UUID):
         total_deductions = Decimal("0")
 
         # 1. Active loans → take min(monthly_installment, balance), prorated
-        loans = (
-            supabase.table("loans")
-            .select("*")
-            .eq("staff_id", staff["id"])
-            .eq("status", "active")
-            .execute()
-        )
-        for loan in loans.data:
+        for loan in loans_by_staff.get(staff["id"], []):
             balance = Decimal(str(loan["balance"]))
             installment = Decimal(str(loan["monthly_installment"]))
             full_applied = min(installment, balance)
@@ -300,14 +360,7 @@ def generate_payroll_entries(period_id: UUID):
                 total_deductions += applied
 
         # 2. Pending advances → take full amount, mark as applied
-        advances = (
-            supabase.table("salary_advances")
-            .select("*")
-            .eq("staff_id", staff["id"])
-            .eq("status", "pending")
-            .execute()
-        )
-        for adv in advances.data:
+        for adv in advances_by_staff.get(staff["id"], []):
             amt = Decimal(str(adv["amount"]))
             deduction_items.append(
                 {
@@ -325,14 +378,7 @@ def generate_payroll_entries(period_id: UUID):
             ).eq("id", adv["id"]).execute()
 
         # 3. Approved fines → take full amount, mark as applied
-        fines = (
-            supabase.table("fines")
-            .select("*")
-            .eq("staff_id", staff["id"])
-            .eq("status", "approved")
-            .execute()
-        )
-        for fine in fines.data:
+        for fine in fines_by_staff.get(staff["id"], []):
             amt = Decimal(str(fine["amount"]))
             deduction_items.append(
                 {
@@ -353,7 +399,9 @@ def generate_payroll_entries(period_id: UUID):
         bond_item = None
         bond = None
         if hired_at:
-            bond = training_bond.get_or_create_bond(supabase, staff["id"], hired_at)
+            bond = training_bond.get_or_create_bond(
+                supabase, staff["id"], hired_at, existing_bonds=bonds_by_staff
+            )
             if bond:
                 bond_item = training_bond.compute_bond_item(bond, period_end_date)
                 if bond_item and bond_item["direction"] == "deduct":
@@ -427,7 +475,9 @@ def generate_payroll_entries(period_id: UUID):
         # Never auto-included — surfaced for HR to review and explicitly approve
         # via POST /entries/{entry_id}/catch-up.
         if hired_at:
-            missed = find_backdated_periods(supabase, staff["id"], outlet_id, hired_at)
+            missed = find_backdated_periods(
+                prior_periods, staff["id"], hired_at, existing_entry_keys
+            )
             for m in missed:
                 estimated = compute_net_salary(
                     gross_salary=gross, working_days=m["days_owed"], deductions=Decimal("0")
@@ -493,19 +543,20 @@ def approve_payroll_period(period_id: UUID):
     for d in loan_deductions.data:
         per_loan[d["source_id"]] += Decimal(str(d["amount"]))
 
-    for loan_id, total in per_loan.items():
-        loan = (
+    if per_loan:
+        loans_resp = (
             supabase.table("loans")
-            .select("balance")
-            .eq("id", loan_id)
-            .single()
+            .select("id, balance")
+            .in_("id", list(per_loan.keys()))
             .execute()
         )
-        new_balance = Decimal(str(loan.data["balance"])) - total
-        update = {"balance": float(max(new_balance, Decimal("0")))}
-        if new_balance <= 0:
-            update["status"] = "paid_off"
-        supabase.table("loans").update(update).eq("id", loan_id).execute()
+        balances_by_loan = {row["id"]: Decimal(str(row["balance"])) for row in loans_resp.data}
+        for loan_id, total in per_loan.items():
+            new_balance = balances_by_loan[loan_id] - total
+            update = {"balance": float(max(new_balance, Decimal("0")))}
+            if new_balance <= 0:
+                update["status"] = "paid_off"
+            supabase.table("loans").update(update).eq("id", loan_id).execute()
 
     # Commit training bond running totals
     training_bond.commit_bond_items_for_period(supabase, str(period_id))
