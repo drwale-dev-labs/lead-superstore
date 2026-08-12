@@ -1,8 +1,8 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { Receipt, Banknote, AlertCircle, GraduationCap } from "lucide-react";
-import { fetchEntryDeductions, fetchEntryBondItems } from "@/lib/api/payroll";
+import { Receipt, Banknote, AlertCircle, GraduationCap, History } from "lucide-react";
+import { fetchEntryDeductions, fetchEntryBondItems, fetchEntryCatchUps } from "@/lib/api/payroll";
 import { LoadingState } from "@/components/ui/states";
 import { formatNaira } from "@/lib/types";
 
@@ -24,7 +24,13 @@ export function DeductionBreakdown({ entryId }: { entryId: string }) {
     queryFn: () => fetchEntryBondItems(entryId),
   });
 
+  const catchUpsQuery = useQuery({
+    queryKey: ["entry-catch-ups", entryId],
+    queryFn: () => fetchEntryCatchUps(entryId),
+  });
+
   const payback = bondQuery.data?.find((b) => b.direction === "payback");
+  const catchUps = catchUpsQuery.data ?? [];
 
   if (query.isLoading) return <LoadingState label="Loading deductions…" />;
   if (query.isError) {
@@ -32,7 +38,7 @@ export function DeductionBreakdown({ entryId }: { entryId: string }) {
       <p className="text-xs text-red-600">{query.error.message}</p>
     );
   }
-  if ((!query.data || query.data.length === 0) && !payback) {
+  if ((!query.data || query.data.length === 0) && !payback && catchUps.length === 0) {
     return (
       <p className="text-xs text-stone-500">
         No deductions applied for this entry.
@@ -44,6 +50,27 @@ export function DeductionBreakdown({ entryId }: { entryId: string }) {
 
   return (
     <div className="space-y-2">
+      {catchUps.map((c) => (
+        <div
+          key={c.id}
+          className="flex items-start justify-between gap-3 rounded-md border border-blue-100 bg-blue-50 p-3"
+        >
+          <div className="flex min-w-0 items-start gap-2">
+            <History className="mt-0.5 h-4 w-4 flex-shrink-0 text-blue-700" />
+            <div className="min-w-0">
+              <div className="text-[10px] uppercase tracking-wider text-blue-600">
+                Backdated catch-up
+              </div>
+              <div className="text-sm text-stone-800">
+                {c.description ?? `${c.days_owed} days owed`}
+              </div>
+            </div>
+          </div>
+          <div className="text-sm font-medium text-green-700">
+            + {formatNaira(Number(c.amount))}
+          </div>
+        </div>
+      ))}
       {payback && (
         <div className="flex items-start justify-between gap-3 rounded-md border border-purple-100 bg-purple-50 p-3">
           <div className="flex min-w-0 items-start gap-2">

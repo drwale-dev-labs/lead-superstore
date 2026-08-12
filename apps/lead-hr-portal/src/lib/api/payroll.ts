@@ -1,12 +1,16 @@
 import { apiClient } from "./client";
 import {
+  BackdatedCandidateSchema,
   BondItemsResponseSchema,
+  CatchUpItemsResponseSchema,
   EntryDeductionsResponseSchema,
   PayrollEntrySchema,
   PayrollPeriodSchema,
   PayrollPeriodsResponseSchema,
   PeriodDetailSchema,
+  type BackdatedCandidate,
   type BondItem,
+  type CatchUpItem,
   type EntryDeduction,
   type PayrollEntry,
   type PayrollPeriod,
@@ -51,11 +55,15 @@ export async function generateEntries(periodId: string): Promise<{
   period_id: string;
   entries_created: number;
   skipped: string[];
+  backdated: BackdatedCandidate[];
   total_gross: number;
   total_net: number;
 }> {
   const { data } = await apiClient.post(`/api/payroll/periods/${periodId}/generate`);
-  return data;
+  return {
+    ...data,
+    backdated: (data.backdated ?? []).map((b: unknown) => BackdatedCandidateSchema.parse(b)),
+  };
 }
 
 export async function approvePeriod(periodId: string): Promise<PayrollPeriod> {
@@ -99,4 +107,22 @@ export async function fetchEntryBondItems(entryId: string): Promise<BondItem[]> 
     `/api/payroll/entries/${entryId}/bond-items`,
   );
   return BondItemsResponseSchema.parse(data).items;
+}
+
+export async function fetchEntryCatchUps(entryId: string): Promise<CatchUpItem[]> {
+  const { data } = await apiClient.get(
+    `/api/payroll/entries/${entryId}/catch-ups`,
+  );
+  return CatchUpItemsResponseSchema.parse(data).items;
+}
+
+export async function addCatchUp(
+  entryId: string,
+  missedPeriodId: string,
+): Promise<PayrollEntry> {
+  const { data } = await apiClient.post(
+    `/api/payroll/entries/${entryId}/catch-up`,
+    { entry_id: entryId, missed_period_id: missedPeriodId },
+  );
+  return PayrollEntrySchema.parse(data);
 }

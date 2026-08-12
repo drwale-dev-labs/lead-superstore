@@ -329,6 +329,7 @@ export const PayrollEntrySchema = z.object({
   gross_salary: z.number(),
   working_days: z.number(),
   deductions: z.number(),
+  catch_up_pay: z.number().nullable().optional(),
   net_pay: z.number(),
   bank_name: z.string().nullable(),
   bank_account_number: z.string().nullable(),
@@ -387,6 +388,35 @@ export const BondItemsResponseSchema = z.object({
 });
 
 export type BondItem = z.infer<typeof BondItemSchema>;
+
+export const BackdatedCandidateSchema = z.object({
+  staff_id: z.string().uuid(),
+  staff_name: z.string(),
+  entry_id: z.string().uuid(),
+  missed_period_id: z.string().uuid(),
+  missed_period_label: z.string(),
+  days_owed: z.number(),
+  estimated_amount: z.number(),
+});
+
+export type BackdatedCandidate = z.infer<typeof BackdatedCandidateSchema>;
+
+export const CatchUpItemSchema = z.object({
+  id: z.string().uuid(),
+  entry_id: z.string().uuid(),
+  staff_id: z.string().uuid(),
+  missed_period_id: z.string().uuid(),
+  days_owed: z.number(),
+  amount: z.number(),
+  description: z.string().nullable(),
+});
+
+export const CatchUpItemsResponseSchema = z.object({
+  count: z.number(),
+  items: z.array(CatchUpItemSchema),
+});
+
+export type CatchUpItem = z.infer<typeof CatchUpItemSchema>;
 
 // ============================================================================
 // Helpers

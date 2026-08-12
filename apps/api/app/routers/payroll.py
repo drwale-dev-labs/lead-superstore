@@ -12,11 +12,17 @@ from fastapi.responses import StreamingResponse
 
 from app.core.db import get_supabase
 from app.schemas.payroll import (
+    AddCatchUpRequest,
     PayrollEntryUpdate,
     PayrollPeriodCreate,
     SalaryStructureCreate,
 )
-from app.services.payroll import compute_net_salary
+from app.services.payroll import (
+    already_has_catch_up,
+    calendar_days_worked_in_period,
+    compute_net_salary,
+    find_backdated_periods,
+)
 from app.services import training_bond
 
 router = APIRouter()
@@ -159,7 +165,10 @@ def generate_payroll_entries(period_id: UUID):
         )
 
     outlet_id = period.data["outlet_id"]
+    period_start_str = period.data["period_start"]
     period_end = period.data["period_end"]
+    period_start = date.fromisoformat(period_start_str)
+    period_end_date = date.fromisoformat(period_end)
 
     # === Unwind any prior generation ===
     prior_entries = (
@@ -181,23 +190,41 @@ def generate_payroll_entries(period_id: UUID):
             "period_id", str(period_id)
         ).execute()
 
-    # === Pull active staff at this outlet ===
-    staff_resp = (
+    # === Pull staff eligible for this period ===
+    # Active staff (normal case, plus mid-period hires — hired_at trims their days).
+    active_staff_resp = (
         supabase.table("staff")
         .select(
             "id, first_name, last_name, bank_name, "
-            "bank_account_number, bank_account_name, hired_at"
+            "bank_account_number, bank_account_name, hired_at, terminated_at"
         )
         .eq("outlet_id", outlet_id)
         .eq("status", "active")
         .execute()
     )
+    # Staff terminated during this period still worked part of it and are owed
+    # a final prorated paycheck — without this they'd be silently skipped since
+    # they're no longer 'active' by the time payroll runs.
+    terminated_staff_resp = (
+        supabase.table("staff")
+        .select(
+            "id, first_name, last_name, bank_name, "
+            "bank_account_number, bank_account_name, hired_at, terminated_at"
+        )
+        .eq("outlet_id", outlet_id)
+        .eq("status", "terminated")
+        .gte("terminated_at", period_start_str)
+        .lte("terminated_at", period_end)
+        .execute()
+    )
+    staff_list = active_staff_resp.data + terminated_staff_resp.data
 
     total_gross = Decimal("0")
     total_net = Decimal("0")
     skipped: list[str] = []
+    backdated: list[dict] = []
 
-    for staff in staff_resp.data:
+    for staff in staff_list:
         # Find active salary structure
         structures = (
             supabase.table("salary_structures")
@@ -223,11 +250,26 @@ def generate_payroll_entries(period_id: UUID):
 
         gross = Decimal(str(active["gross_salary"]))
 
+        # === Proration: mid-period hire or mid-period termination ===
+        hired_at = date.fromisoformat(staff["hired_at"]) if staff.get("hired_at") else None
+        terminated_at = (
+            date.fromisoformat(staff["terminated_at"]) if staff.get("terminated_at") else None
+        )
+        days_worked = calendar_days_worked_in_period(
+            period_start, period_end_date, hired_at, terminated_at
+        )
+        working_days = min(days_worked, 30)
+        proration_ratio = Decimal(working_days) / Decimal("30")
+
         # === Collect deduction items for this staff ===
+        # Loan installments and the training bond are recurring per-period amounts,
+        # so they prorate with days worked. Advances and fines are flat one-time
+        # amounts tied to a specific request/incident, so they always charge in full
+        # regardless of partial-period employment (confirmed with the business owner).
         deduction_items: list[dict] = []
         total_deductions = Decimal("0")
 
-        # 1. Active loans → take min(monthly_installment, balance)
+        # 1. Active loans → take min(monthly_installment, balance), prorated
         loans = (
             supabase.table("loans")
             .select("*")
@@ -238,8 +280,12 @@ def generate_payroll_entries(period_id: UUID):
         for loan in loans.data:
             balance = Decimal(str(loan["balance"]))
             installment = Decimal(str(loan["monthly_installment"]))
-            applied = min(installment, balance)
+            full_applied = min(installment, balance)
+            applied = min(full_applied * proration_ratio, balance).quantize(Decimal("0.01"))
             if applied > 0:
+                prorated_note = (
+                    f" — prorated for {working_days}/30 days" if working_days < 30 else ""
+                )
                 deduction_items.append(
                     {
                         "source_type": "loan",
@@ -247,6 +293,7 @@ def generate_payroll_entries(period_id: UUID):
                         "amount": float(applied),
                         "description": (
                             f"Loan installment (₦{loan['principal']:.0f} principal)"
+                            f"{prorated_note}"
                         ),
                     }
                 )
@@ -300,33 +347,45 @@ def generate_payroll_entries(period_id: UUID):
                 {"status": "applied", "applied_to_period_id": str(period_id)}
             ).eq("id", fine["id"]).execute()
 
-        # 4. Training bond (₦5,000/month deduction for months 1-6, payback months 7-12)
+        # 4. Training bond (₦5,000/month deduction for months 1-6, payback months 7-12).
+        # Deduction is prorated like the loan installment above; payback is not
+        # prorated (it's the company returning money already deducted in full months).
         bond_item = None
         bond = None
-        if staff.get("hired_at"):
-            hired_at = date.fromisoformat(staff["hired_at"])
+        if hired_at:
             bond = training_bond.get_or_create_bond(supabase, staff["id"], hired_at)
             if bond:
-                bond_item = training_bond.compute_bond_item(bond, date.fromisoformat(period_end))
-                if bond_item:
-                    if bond_item["direction"] == "deduct":
-                        deduction_items.append(
-                            {
-                                "source_type": "training_bond",
-                                "source_id": bond["id"],
-                                "amount": float(bond_item["amount"]),
-                                "description": (
-                                    f"Training bond deduction (month {bond_item['month_number']} of 6)"
-                                ),
-                            }
-                        )
-                        total_deductions += bond_item["amount"]
+                bond_item = training_bond.compute_bond_item(bond, period_end_date)
+                if bond_item and bond_item["direction"] == "deduct":
+                    prorated_amount = (bond_item["amount"] * proration_ratio).quantize(
+                        Decimal("0.01")
+                    )
+                    prorated_note = (
+                        f" — prorated for {working_days}/30 days" if working_days < 30 else ""
+                    )
+                    deduction_items.append(
+                        {
+                            "source_type": "training_bond",
+                            "source_id": bond["id"],
+                            "amount": float(prorated_amount),
+                            "description": (
+                                f"Training bond deduction (month {bond_item['month_number']} of 6)"
+                                f"{prorated_note}"
+                            ),
+                        }
+                    )
+                    total_deductions += prorated_amount
+                    # Keep the item's amount in sync with what was actually charged,
+                    # so record_bond_item below commits the prorated figure, not the
+                    # flat monthly rate — this is the source of truth for running totals.
+                    bond_item["amount"] = prorated_amount
 
         # === Compute net ===
         net = compute_net_salary(
-            gross_salary=gross, working_days=30, deductions=total_deductions
+            gross_salary=gross, working_days=working_days, deductions=total_deductions
         )
         # Bond payback is added to net pay, not part of the deductions subtraction above
+        # (not prorated — it's returning money already deducted in full months).
         if bond_item and bond_item["direction"] == "payback":
             net += bond_item["amount"]
 
@@ -338,7 +397,7 @@ def generate_payroll_entries(period_id: UUID):
                     "period_id": str(period_id),
                     "staff_id": staff["id"],
                     "gross_salary": float(gross),
-                    "working_days": 30,
+                    "working_days": working_days,
                     "deductions": float(total_deductions),
                     "net_pay": float(net),
                     "bank_name": staff.get("bank_name"),
@@ -364,6 +423,29 @@ def generate_payroll_entries(period_id: UUID):
         if bond_item and bond:
             training_bond.record_bond_item(supabase, bond["id"], bond_item, entry_id)
 
+        # === Detect backdated periods (Phase 8b) ===
+        # Never auto-included — surfaced for HR to review and explicitly approve
+        # via POST /entries/{entry_id}/catch-up.
+        if hired_at:
+            missed = find_backdated_periods(supabase, staff["id"], outlet_id, hired_at)
+            for m in missed:
+                estimated = compute_net_salary(
+                    gross_salary=gross, working_days=m["days_owed"], deductions=Decimal("0")
+                )
+                backdated.append(
+                    {
+                        "staff_id": str(staff["id"]),
+                        "staff_name": f"{staff['first_name']} {staff['last_name']}",
+                        "entry_id": entry_id,
+                        "missed_period_id": m["period_id"],
+                        "missed_period_label": (
+                            f"{m['period_start'].isoformat()} to {m['period_end'].isoformat()}"
+                        ),
+                        "days_owed": m["days_owed"],
+                        "estimated_amount": float(estimated),
+                    }
+                )
+
         total_gross += gross
         total_net += net
 
@@ -373,8 +455,9 @@ def generate_payroll_entries(period_id: UUID):
 
     return {
         "period_id": str(period_id),
-        "entries_created": len(staff_resp.data) - len(skipped),
+        "entries_created": len(staff_list) - len(skipped),
         "skipped": skipped,
+        "backdated": backdated,
         "total_gross": float(total_gross),
         "total_net": float(total_net),
     }
@@ -536,6 +619,105 @@ def get_entry_bond_items(entry_id: UUID):
         .execute()
     )
     return {"count": len(response.data), "items": response.data}
+
+
+@router.get("/entries/{entry_id}/catch-ups")
+def get_entry_catch_ups(entry_id: UUID):
+    """Show backdated catch-up line items added to this entry, if any."""
+    supabase = get_supabase()
+    response = (
+        supabase.table("payroll_entry_catchups")
+        .select("*, payroll_periods!missed_period_id(period_start, period_end)")
+        .eq("entry_id", str(entry_id))
+        .execute()
+    )
+    return {"count": len(response.data), "items": response.data}
+
+
+@router.post("/entries/{entry_id}/catch-up", status_code=status.HTTP_201_CREATED)
+def add_catch_up(entry_id: UUID, payload: AddCatchUpRequest):
+    """HR explicitly approves a backdated catch-up for one missed period.
+
+    Adds a distinct, traceable line item to THIS (current) entry — the
+    original missed period is never reopened or touched. Base pay only; no
+    deductions are retroactively computed for the missed period (see
+    BUGFIX_RUNBOOK.md Phase 8b).
+    """
+    supabase = get_supabase()
+
+    entry = (
+        supabase.table("payroll_entries")
+        .select("*, payroll_periods(status)")
+        .eq("id", str(entry_id))
+        .single()
+        .execute()
+    )
+    if not entry.data:
+        raise HTTPException(status_code=404, detail="Payroll entry not found")
+    if entry.data["payroll_periods"]["status"] != "draft":
+        raise HTTPException(
+            status_code=400, detail="Cannot add a catch-up to an approved period"
+        )
+
+    staff_id = entry.data["staff_id"]
+
+    if already_has_catch_up(supabase, staff_id, str(payload.missed_period_id)):
+        raise HTTPException(
+            status_code=409, detail="A catch-up for this staff/period has already been added"
+        )
+
+    missed_period = (
+        supabase.table("payroll_periods")
+        .select("period_start, period_end")
+        .eq("id", str(payload.missed_period_id))
+        .single()
+        .execute()
+    )
+    if not missed_period.data:
+        raise HTTPException(status_code=404, detail="Missed period not found")
+
+    staff = supabase.table("staff").select("hired_at").eq("id", staff_id).single().execute()
+    hired_at = date.fromisoformat(staff.data["hired_at"]) if staff.data.get("hired_at") else None
+    if not hired_at:
+        raise HTTPException(status_code=400, detail="Staff member has no hire date on file")
+
+    period_start = date.fromisoformat(missed_period.data["period_start"])
+    period_end = date.fromisoformat(missed_period.data["period_end"])
+    days_owed = calendar_days_worked_in_period(period_start, period_end, hired_at, None)
+    if days_owed <= 0:
+        raise HTTPException(
+            status_code=400, detail="Staff member's hire date does not fall within this period"
+        )
+
+    gross = Decimal(str(entry.data["gross_salary"]))
+    amount = compute_net_salary(gross_salary=gross, working_days=days_owed, deductions=Decimal("0"))
+
+    supabase.table("payroll_entry_catchups").insert(
+        {
+            "entry_id": str(entry_id),
+            "staff_id": staff_id,
+            "missed_period_id": str(payload.missed_period_id),
+            "days_owed": days_owed,
+            "amount": float(amount),
+            "description": (
+                f"Backdated catch-up: {period_start.isoformat()} to {period_end.isoformat()}"
+            ),
+        }
+    ).execute()
+
+    new_catch_up_total = Decimal(str(entry.data.get("catch_up_pay") or 0)) + amount
+    new_net = Decimal(str(entry.data["net_pay"])) + amount
+
+    updated = (
+        supabase.table("payroll_entries")
+        .update({"catch_up_pay": float(new_catch_up_total), "net_pay": float(new_net)})
+        .eq("id", str(entry_id))
+        .execute()
+    )
+
+    _refresh_period_totals(supabase, entry.data["period_id"])
+
+    return updated.data[0]
 
 
 def _refresh_period_totals(supabase, period_id: str) -> None:

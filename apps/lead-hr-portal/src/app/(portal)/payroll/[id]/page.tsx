@@ -18,6 +18,7 @@ import {
   fetchPeriodDetail,
   generateEntries,
   approvePeriod,
+  addCatchUp,
 } from "@/lib/api/payroll";
 import { LoadingState, ErrorState, EmptyState } from "@/components/ui/states";
 import { PayrollStatusBadge } from "@/components/ui/payroll-status-badge";
@@ -55,6 +56,22 @@ export default function PeriodDetailPage({
       qc.invalidateQueries({ queryKey: ["period", id] });
       qc.invalidateQueries({ queryKey: ["periods"] });
     },
+  });
+
+  const [dismissedBackdated, setDismissedBackdated] = useState<Set<string>>(new Set());
+  const [addingCatchUpFor, setAddingCatchUpFor] = useState<string | null>(null);
+
+  const catchUpMut = useMutation({
+    mutationFn: ({ entryId, missedPeriodId }: { entryId: string; missedPeriodId: string }) =>
+      addCatchUp(entryId, missedPeriodId),
+    onMutate: ({ missedPeriodId, entryId }) => {
+      setAddingCatchUpFor(`${entryId}:${missedPeriodId}`);
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["period", id] });
+      qc.invalidateQueries({ queryKey: ["periods"] });
+    },
+    onSettled: () => setAddingCatchUpFor(null),
   });
 
   if (detailQuery.isLoading) return <LoadingState label="Loading payroll period…" />;
@@ -250,6 +267,80 @@ export default function PeriodDetailPage({
           </div>
         </div>
       )}
+
+      {/* Backdated / missed prior periods (Phase 8b) */}
+      {generateMut.data &&
+        generateMut.data.backdated.filter(
+          (b) => !dismissedBackdated.has(`${b.staff_id}:${b.missed_period_id}`),
+        ).length > 0 && (
+          <div className="rounded-lg border border-purple-200 bg-purple-50 p-4">
+            <div className="flex items-start gap-2">
+              <AlertTriangle className="mt-0.5 h-4 w-4 flex-shrink-0 text-purple-700" />
+              <div className="min-w-0 flex-1">
+                <div className="text-sm font-medium text-purple-900">
+                  {
+                    generateMut.data.backdated.filter(
+                      (b) => !dismissedBackdated.has(`${b.staff_id}:${b.missed_period_id}`),
+                    ).length
+                  }{" "}
+                  staff have unpaid prior periods — review before approving
+                </div>
+                <p className="mt-1 text-xs text-purple-800">
+                  These staff were hired during an earlier period that already ran, but
+                  have no payroll entry for it. Nothing has been added automatically —
+                  review each and explicitly add a catch-up if it's owed.
+                </p>
+                <ul className="mt-2 space-y-1.5 text-xs text-purple-800">
+                  {generateMut.data.backdated
+                    .filter((b) => !dismissedBackdated.has(`${b.staff_id}:${b.missed_period_id}`))
+                    .map((b) => {
+                      const key = `${b.entry_id}:${b.missed_period_id}`;
+                      return (
+                        <li
+                          key={key}
+                          className="flex items-center justify-between gap-3 rounded-md border border-purple-200 bg-white px-3 py-2"
+                        >
+                          <span>
+                            <strong>{b.staff_name}</strong> — missing {b.missed_period_label} (
+                            {b.days_owed} days, ~{formatNaira(b.estimated_amount)})
+                          </span>
+                          <div className="flex flex-shrink-0 gap-2">
+                            <button
+                              onClick={() => {
+                                catchUpMut.mutate({
+                                  entryId: b.entry_id,
+                                  missedPeriodId: b.missed_period_id,
+                                });
+                              }}
+                              disabled={addingCatchUpFor === key}
+                              className="rounded-md bg-purple-700 px-2.5 py-1 text-[11px] font-medium text-white hover:bg-purple-800 disabled:opacity-50"
+                            >
+                              {addingCatchUpFor === key ? "Adding…" : "Add catch-up"}
+                            </button>
+                            <button
+                              onClick={() =>
+                                setDismissedBackdated(
+                                  (prev) => new Set(prev).add(`${b.staff_id}:${b.missed_period_id}`),
+                                )
+                              }
+                              className="rounded-md border border-purple-300 bg-white px-2.5 py-1 text-[11px] font-medium text-purple-700 hover:bg-purple-100"
+                            >
+                              Dismiss
+                            </button>
+                          </div>
+                        </li>
+                      );
+                    })}
+                </ul>
+                {catchUpMut.isError && (
+                  <p className="mt-2 text-xs text-red-700">
+                    {(catchUpMut.error as Error).message}
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
 
       {/* Missing bank details warning */}
       {entriesMissingBankDetails.length > 0 && (
