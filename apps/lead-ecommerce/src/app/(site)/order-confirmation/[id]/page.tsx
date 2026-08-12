@@ -7,6 +7,15 @@ import { CheckCircle2, MapPin, Truck, Store, Phone } from "lucide-react";
 import { fetchOrder } from "@/lib/api/orders";
 import { formatNaira } from "@/lib/types";
 import { PaymentButton } from "@/components/shop/payment-button";
+import { OrderStatusTracker } from "@/components/shop/order-status-tracker";
+
+const ACTIVE_STATUSES = new Set([
+  "pending_payment",
+  "payment_received",
+  "confirmed",
+  "ready_for_pickup",
+  "out_for_delivery",
+]);
 
 export default function OrderConfirmationPage({
   params,
@@ -18,6 +27,10 @@ export default function OrderConfirmationPage({
   const query = useQuery({
     queryKey: ["order", id],
     queryFn: () => fetchOrder(id),
+    // Keep polling while the order is still moving through the pipeline so
+    // the customer sees status changes without manually refreshing.
+    refetchInterval: (q) =>
+      q.state.data && ACTIVE_STATUSES.has(q.state.data.order.status) ? 15_000 : false,
   });
 
   if (query.isLoading) {
@@ -98,6 +111,13 @@ export default function OrderConfirmationPage({
           </div>
         )}
       </div>
+
+      {/* Live status tracker */}
+      {order.status !== "pending_payment" && (
+        <div className="mt-4">
+          <OrderStatusTracker status={order.status} fulfillmentMethod={order.fulfillment_method} />
+        </div>
+      )}
 
       {/* Pickup / delivery details */}
       <div className="mt-4 rounded-lg border border-stone-200 bg-white p-6">

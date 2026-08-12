@@ -116,6 +116,18 @@ export const OrderItemSchema = z.object({
   line_total: z.number(),
 });
 
+export const OrderStatusEnum = z.enum([
+  "pending_payment",
+  "payment_received",
+  "confirmed",
+  "ready_for_pickup",
+  "out_for_delivery",
+  "completed",
+  "cancelled",
+  "refunded",
+]);
+export type OrderStatus = z.infer<typeof OrderStatusEnum>;
+
 export const OrderSchema = z.object({
   id: z.string().uuid(),
   order_number: z.string(),
@@ -127,7 +139,7 @@ export const OrderSchema = z.object({
   delivery_fee: z.number(),
   service_charge: z.number(),
   total: z.number(),
-  status: z.string(),
+  status: OrderStatusEnum,
   paid_at: z.string().nullable().optional(),
   created_at: z.string(),
   outlets: z
