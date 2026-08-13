@@ -1,6 +1,7 @@
 import hashlib
 import hmac
 import json
+import logging
 import time
 from datetime import datetime, timezone
 
@@ -13,9 +14,64 @@ from app.schemas.payments import (
     InitializePaymentResponse,
     VerifyPaymentResponse,
 )
-from app.services import paystack
+from app.services import paystack, sms
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
+
+
+def _notify_order_confirmed(supabase, order: dict) -> None:
+    """Send the payment-confirmation SMS, at most once per order.
+
+    Both the browser callback (verify_payment) and the Paystack webhook can
+    independently observe the pending_payment -> payment_received transition,
+    so this claims the "send" via a conditional update (only succeeds if no
+    send has been claimed yet) before actually sending — the same idempotency
+    concern as the status update itself, just for the notification send.
+    Never lets a notification failure undo or block the payment status
+    update that already committed.
+    """
+    claim = (
+        supabase.table("orders")
+        .update({"confirmation_sms_sent_at": datetime.now(timezone.utc).isoformat()})
+        .eq("id", order["id"])
+        .is_("confirmation_sms_sent_at", "null")
+        .execute()
+    )
+    if not claim.data:
+        return  # another request already claimed/sent this notification
+
+    customer_resp = (
+        supabase.table("customers")
+        .select("first_name, phone")
+        .eq("id", order["customer_id"])
+        .execute()
+    )
+    outlet_resp = (
+        supabase.table("outlets")
+        .select("name")
+        .eq("id", order["fulfillment_outlet_id"])
+        .execute()
+    )
+    customer = customer_resp.data[0] if customer_resp.data else {}
+    outlet = outlet_resp.data[0] if outlet_resp.data else {}
+
+    if not customer.get("phone"):
+        return
+
+    try:
+        sms.send_order_confirmation_sms(
+            to_phone=customer["phone"],
+            customer_name=customer.get("first_name", "there"),
+            order_number=order["order_number"],
+            total=float(order["total"]),
+            fulfillment_method=order["fulfillment_method"],
+            outlet_name=outlet.get("name", "Lead Superstore"),
+        )
+    except Exception:
+        logger.exception(
+            "Order confirmation SMS failed for order %s", order["order_number"]
+        )
 
 
 @router.post("/initialize", response_model=InitializePaymentResponse)
@@ -112,6 +168,7 @@ def verify_payment(reference: str):
                 "paid_at": datetime.now(timezone.utc).isoformat(),
             }
         ).eq("id", order["id"]).execute()
+        _notify_order_confirmed(supabase, order)
         return VerifyPaymentResponse(
             status="success",
             order_id=order["id"],
@@ -154,16 +211,18 @@ async def paystack_webhook(request: Request):
 
         order_resp = (
             supabase.table("orders")
-            .select("id, status")
+            .select("*")
             .eq("payment_reference", reference)
             .execute()
         )
         if order_resp.data and order_resp.data[0]["status"] == "pending_payment":
+            order = order_resp.data[0]
             supabase.table("orders").update(
                 {
                     "status": "payment_received",
                     "paid_at": datetime.now(timezone.utc).isoformat(),
                 }
-            ).eq("id", order_resp.data[0]["id"]).execute()
+            ).eq("id", order["id"]).execute()
+            _notify_order_confirmed(supabase, order)
 
     return {"received": True}

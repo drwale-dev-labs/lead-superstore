@@ -16,6 +16,7 @@ dependencies = [
     "resend>=2.35.0",
     "supabase>=2.29.0",
     "uvicorn[standard]>=0.46.0",
+    "xhtml2pdf>=0.2.17",
 ]
 
 

@@ -1,3 +1,4 @@
+import logging
 from datetime import datetime, timezone
 from uuid import UUID
 
@@ -5,6 +6,9 @@ from fastapi import APIRouter, HTTPException, Query, status
 
 from app.core.db import get_supabase
 from app.schemas.orders import OrderAdminUpdate, OrderCreate, OrderTrackRequest
+from app.services import sms
+
+logger = logging.getLogger(__name__)
 
 # ============================================================================
 # Public router — checkout + order lookup for the e-commerce app
@@ -228,6 +232,55 @@ def get_order_admin(order_id: UUID):
     return {"order": order_resp.data[0], "items": items_resp.data}
 
 
+def _notify_order_completed(supabase, order: dict) -> None:
+    """Send the order-completed SMS, at most once per order.
+
+    Claims the send via a conditional update (only succeeds if no send has
+    been claimed yet) to guard against a double-click on "Mark completed"
+    triggering two texts. Never lets a notification failure undo or block
+    the status update that already committed.
+    """
+    claim = (
+        supabase.table("orders")
+        .update({"completion_sms_sent_at": datetime.now(timezone.utc).isoformat()})
+        .eq("id", order["id"])
+        .is_("completion_sms_sent_at", "null")
+        .execute()
+    )
+    if not claim.data:
+        return
+
+    customer_resp = (
+        supabase.table("customers")
+        .select("phone")
+        .eq("id", order["customer_id"])
+        .execute()
+    )
+    outlet_resp = (
+        supabase.table("outlets")
+        .select("name")
+        .eq("id", order["fulfillment_outlet_id"])
+        .execute()
+    )
+    customer = customer_resp.data[0] if customer_resp.data else {}
+    outlet = outlet_resp.data[0] if outlet_resp.data else {}
+
+    if not customer.get("phone"):
+        return
+
+    try:
+        sms.send_order_completed_sms(
+            to_phone=customer["phone"],
+            order_number=order["order_number"],
+            fulfillment_method=order["fulfillment_method"],
+            outlet_name=outlet.get("name", "Lead Superstore"),
+        )
+    except Exception:
+        logger.exception(
+            "Order completed SMS failed for order %s", order["order_number"]
+        )
+
+
 @admin_router.patch("/{order_id}")
 def update_order(order_id: UUID, payload: OrderAdminUpdate):
     """Progress an order: change status, set delivery fee, or add staff notes.
@@ -268,4 +321,9 @@ def update_order(order_id: UUID, payload: OrderAdminUpdate):
     response = (
         supabase.table("orders").update(update_data).eq("id", str(order_id)).execute()
     )
-    return response.data[0]
+    updated = response.data[0]
+
+    if payload.status == "completed" and order["status"] != "completed":
+        _notify_order_completed(supabase, updated)
+
+    return updated

@@ -10,6 +10,8 @@ class Settings(BaseSettings):
     PAYSTACK_SECRET_KEY: str | None = None
     RESEND_API_KEY: str | None = None
     EMAIL_FROM_ADDRESS: str = "Lead Superstore <onboarding@resend.dev>"
+    TERMII_API_KEY: str | None = None
+    TERMII_SENDER_ID: str = "LeadStore"
     ECOMMERCE_URL: str = "http://localhost:3001"
     ENVIRONMENT: str = "development"
 
