@@ -4,7 +4,7 @@ from uuid import UUID
 from fastapi import APIRouter, HTTPException, Query, status
 
 from app.core.db import get_supabase
-from app.schemas.orders import OrderAdminUpdate, OrderCreate
+from app.schemas.orders import OrderAdminUpdate, OrderCreate, OrderTrackRequest
 
 # ============================================================================
 # Public router — checkout + order lookup for the e-commerce app
@@ -121,6 +121,39 @@ def create_order(payload: OrderCreate):
     )
 
     return {"order": order_resp.data, "items": items_resp.data}
+
+
+@public_router.post("/track")
+def track_order(payload: OrderTrackRequest):
+    """Look up an order by order number + email — no login required.
+
+    The order number acts as a shared secret (same as most guest-checkout
+    tracking flows): knowing a customer's email alone isn't enough to see
+    their order history.
+    """
+    supabase = get_supabase()
+
+    order_resp = (
+        supabase.table("orders")
+        .select(
+            "*, outlets(name, city, phone), customers!inner(first_name, last_name, email, phone)"
+        )
+        .eq("order_number", payload.order_number)
+        .ilike("customers.email", payload.email)
+        .execute()
+    )
+    if not order_resp.data:
+        raise HTTPException(
+            status_code=404,
+            detail="No order found with that order number and email. Please check and try again.",
+        )
+
+    order = order_resp.data[0]
+    items_resp = (
+        supabase.table("order_items").select("*").eq("order_id", order["id"]).execute()
+    )
+
+    return {"order": order, "items": items_resp.data}
 
 
 @public_router.get("/{order_id}")

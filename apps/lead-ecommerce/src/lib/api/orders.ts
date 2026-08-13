@@ -27,3 +27,14 @@ export async function fetchOrder(orderId: string): Promise<OrderDetail> {
   const { data } = await apiClient.get(`/api/orders/${orderId}`);
   return OrderDetailSchema.parse(data);
 }
+
+export async function trackOrder(
+  orderNumber: string,
+  email: string,
+): Promise<OrderDetail> {
+  const { data } = await apiClient.post("/api/orders/track", {
+    order_number: orderNumber,
+    email,
+  });
+  return OrderDetailSchema.parse(data);
+}

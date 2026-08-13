@@ -33,6 +33,11 @@ class OrderCreate(BaseModel):
             raise ValueError("delivery_address should not be set when fulfillment_method is 'pickup'")
         return self
 
+class OrderTrackRequest(BaseModel):
+    order_number: str = Field(..., min_length=1, max_length=50)
+    email: EmailStr
+
+
 class OrderAdminUpdate(BaseModel):
     status: Literal[
         "confirmed",
