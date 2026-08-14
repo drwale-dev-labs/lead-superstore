@@ -18,6 +18,7 @@ type CartContextValue = {
   items: CartItem[];
   outletId: string | null;
   addItem: (product: Product, quantity: number, outletId: string) => void;
+  wouldReplaceCart: (forOutletId: string) => boolean;
   updateQuantity: (productId: string, quantity: number) => void;
   removeItem: (productId: string) => void;
   clearCart: () => void;
@@ -70,8 +71,14 @@ export function CartProvider({ children }: { children: ReactNode }) {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(stored));
   }, [items, outletId, hydrated]);
 
+  function wouldReplaceCart(forOutletId: string): boolean {
+    return items.length > 0 && outletId !== null && outletId !== forOutletId;
+  }
+
   function addItem(product: Product, quantity: number, forOutletId: string) {
-    // If cart has items from a different outlet, clear first
+    // If cart has items from a different outlet, clear first. Callers that
+    // want to warn the user before this happens should check
+    // wouldReplaceCart(forOutletId) and confirm before calling addItem.
     if (outletId && outletId !== forOutletId) {
       setItems([{ product, quantity }]);
       setOutletId(forOutletId);
@@ -127,6 +134,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
         items,
         outletId,
         addItem,
+        wouldReplaceCart,
         updateQuantity,
         removeItem,
         clearCart,

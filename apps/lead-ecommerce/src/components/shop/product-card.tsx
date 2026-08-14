@@ -11,7 +11,7 @@ import { useRestaurantBasket } from "@/lib/restaurant-basket-context";
 export function ProductCard({ product }: { product: Product }) {
   const { outlet } = useOutlet();
   const { addItem } = useRestaurantBasket();
-  const { addItem: addToCart } = useCart();
+  const { addItem: addToCart, wouldReplaceCart } = useCart();
   const [added, setAdded] = useState(false);
 
   return (
@@ -69,6 +69,14 @@ export function ProductCard({ product }: { product: Product }) {
           onClick={(e) => {
             e.preventDefault();
             if (!outlet) return;
+            if (
+              wouldReplaceCart(outlet.id) &&
+              !confirm(
+                "Your cart has items from a different outlet. Adding this will clear it and start a new cart here. Continue?",
+              )
+            ) {
+              return;
+            }
             addToCart(product, 1, outlet.id);
             setAdded(true);
             setTimeout(() => setAdded(false), 1500);

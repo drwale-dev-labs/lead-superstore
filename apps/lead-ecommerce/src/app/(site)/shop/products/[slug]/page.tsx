@@ -19,7 +19,7 @@ export default function ProductDetailPage({
 }) {
   const { slug } = use(params);
   const { outlet } = useOutlet();
-  const { addItem, outletId: cartOutletId } = useCart();
+  const { addItem, wouldReplaceCart } = useCart();
   const [quantity, setQuantity] = useState(1);
   const [added, setAdded] = useState(false);
   const { addItem: addToRestaurantBasket } = useRestaurantBasket();
@@ -167,6 +167,14 @@ export default function ProductDetailPage({
                 <button
                   onClick={() => {
                     if (!canAddToCart || !outlet) return;
+                    if (
+                      wouldReplaceCart(outlet.id) &&
+                      !confirm(
+                        "Your cart has items from a different outlet. Adding this will clear it and start a new cart here. Continue?",
+                      )
+                    ) {
+                      return;
+                    }
                     addItem(product, quantity, outlet.id);
                     setAdded(true);
                     setTimeout(() => setAdded(false), 2000);
@@ -184,12 +192,6 @@ export default function ProductDetailPage({
                         : "Add to cart"}
                 </button>
               </div>
-              {cartOutletId && outlet && cartOutletId !== outlet.id && (
-                <p className="mt-2 text-[11px] text-orange-600">
-                  Your cart has items from a different outlet. Adding this will start a
-                  new cart for {outlet.name}.
-                </p>
-              )}
             </>
           )}
         </div>
