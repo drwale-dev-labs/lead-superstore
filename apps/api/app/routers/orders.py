@@ -7,6 +7,7 @@ from fastapi import APIRouter, HTTPException, Query, status
 from app.core.db import get_supabase
 from app.schemas.orders import OrderAdminUpdate, OrderCreate, OrderTrackRequest
 from app.services import sms
+from app.services.notifications import claim_and_notify
 
 logger = logging.getLogger(__name__)
 
@@ -235,50 +236,19 @@ def get_order_admin(order_id: UUID):
 def _notify_order_completed(supabase, order: dict) -> None:
     """Send the order-completed SMS, at most once per order.
 
-    Claims the send via a conditional update (only succeeds if no send has
-    been claimed yet) to guard against a double-click on "Mark completed"
-    triggering two texts. Never lets a notification failure undo or block
-    the status update that already committed.
+    Guards against a double-click on "Mark completed" triggering two texts
+    via claim_and_notify's conditional-update claim.
     """
-    claim = (
-        supabase.table("orders")
-        .update({"completion_sms_sent_at": datetime.now(timezone.utc).isoformat()})
-        .eq("id", order["id"])
-        .is_("completion_sms_sent_at", "null")
-        .execute()
-    )
-    if not claim.data:
-        return
 
-    customer_resp = (
-        supabase.table("customers")
-        .select("phone")
-        .eq("id", order["customer_id"])
-        .execute()
-    )
-    outlet_resp = (
-        supabase.table("outlets")
-        .select("name")
-        .eq("id", order["fulfillment_outlet_id"])
-        .execute()
-    )
-    customer = customer_resp.data[0] if customer_resp.data else {}
-    outlet = outlet_resp.data[0] if outlet_resp.data else {}
-
-    if not customer.get("phone"):
-        return
-
-    try:
+    def send(customer: dict, outlet: dict) -> None:
         sms.send_order_completed_sms(
             to_phone=customer["phone"],
             order_number=order["order_number"],
             fulfillment_method=order["fulfillment_method"],
             outlet_name=outlet.get("name", "Lead Superstore"),
         )
-    except Exception:
-        logger.exception(
-            "Order completed SMS failed for order %s", order["order_number"]
-        )
+
+    claim_and_notify(supabase, order, "completion_sms_sent_at", send)
 
 
 @admin_router.patch("/{order_id}")

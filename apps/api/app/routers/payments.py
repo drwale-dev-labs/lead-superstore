@@ -15,6 +15,7 @@ from app.schemas.payments import (
     VerifyPaymentResponse,
 )
 from app.services import paystack, sms
+from app.services.notifications import claim_and_notify
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -25,41 +26,11 @@ def _notify_order_confirmed(supabase, order: dict) -> None:
 
     Both the browser callback (verify_payment) and the Paystack webhook can
     independently observe the pending_payment -> payment_received transition,
-    so this claims the "send" via a conditional update (only succeeds if no
-    send has been claimed yet) before actually sending — the same idempotency
-    concern as the status update itself, just for the notification send.
-    Never lets a notification failure undo or block the payment status
-    update that already committed.
+    so this relies on claim_and_notify's conditional-update claim to ensure
+    only one of them actually sends.
     """
-    claim = (
-        supabase.table("orders")
-        .update({"confirmation_sms_sent_at": datetime.now(timezone.utc).isoformat()})
-        .eq("id", order["id"])
-        .is_("confirmation_sms_sent_at", "null")
-        .execute()
-    )
-    if not claim.data:
-        return  # another request already claimed/sent this notification
 
-    customer_resp = (
-        supabase.table("customers")
-        .select("first_name, phone")
-        .eq("id", order["customer_id"])
-        .execute()
-    )
-    outlet_resp = (
-        supabase.table("outlets")
-        .select("name")
-        .eq("id", order["fulfillment_outlet_id"])
-        .execute()
-    )
-    customer = customer_resp.data[0] if customer_resp.data else {}
-    outlet = outlet_resp.data[0] if outlet_resp.data else {}
-
-    if not customer.get("phone"):
-        return
-
-    try:
+    def send(customer: dict, outlet: dict) -> None:
         sms.send_order_confirmation_sms(
             to_phone=customer["phone"],
             customer_name=customer.get("first_name", "there"),
@@ -68,10 +39,8 @@ def _notify_order_confirmed(supabase, order: dict) -> None:
             fulfillment_method=order["fulfillment_method"],
             outlet_name=outlet.get("name", "Lead Superstore"),
         )
-    except Exception:
-        logger.exception(
-            "Order confirmation SMS failed for order %s", order["order_number"]
-        )
+
+    claim_and_notify(supabase, order, "confirmation_sms_sent_at", send)
 
 
 @router.post("/initialize", response_model=InitializePaymentResponse)
