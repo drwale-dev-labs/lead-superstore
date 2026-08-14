@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { Minus, Plus, Trash2, ShoppingBag, ArrowRight } from "lucide-react";
 import { useCart } from "@/lib/cart-context";
@@ -50,13 +51,14 @@ export default function CartPage() {
             key={product.id}
             className="flex items-center gap-4 rounded-lg border border-stone-200 bg-white p-4"
           >
-            <div className="h-16 w-16 flex-shrink-0 overflow-hidden rounded-md bg-stone-100">
+            <div className="relative h-16 w-16 flex-shrink-0 overflow-hidden rounded-md bg-stone-100">
               {product.image_url ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
+                <Image
                   src={product.image_url}
                   alt={product.name}
-                  className="h-full w-full object-cover"
+                  fill
+                  sizes="64px"
+                  className="object-cover"
                 />
               ) : (
                 <div className="flex h-full w-full items-center justify-center text-[9px] text-stone-400">

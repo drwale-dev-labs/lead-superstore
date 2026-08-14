@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useState } from "react";
 import { Plus } from "lucide-react";
 import { formatNaira, type Product } from "@/lib/types";
@@ -17,13 +18,14 @@ export function ProductCard({ product }: { product: Product }) {
   return (
     <div className="group relative rounded-lg border border-stone-200 bg-white p-4 transition-colors hover:border-amber-300">
       <Link href={`/shop/products/${product.slug}`}>
-        <div className="aspect-square overflow-hidden rounded-md bg-stone-100">
+        <div className="relative aspect-square overflow-hidden rounded-md bg-stone-100">
           {product.image_url ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
+            <Image
               src={product.image_url}
               alt={product.name}
-              className="h-full w-full object-cover"
+              fill
+              sizes="(min-width: 1024px) 25vw, (min-width: 640px) 33vw, 50vw"
+              className="object-cover"
             />
           ) : (
             <div className="flex h-full w-full items-center justify-center text-xs text-stone-400">
