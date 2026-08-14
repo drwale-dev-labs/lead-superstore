@@ -1,14 +1,18 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
 import { Plus } from "lucide-react";
 import { formatNaira, type Product } from "@/lib/types";
 import { useOutlet } from "@/lib/outlet-context";
+import { useCart } from "@/lib/cart-context";
 import { useRestaurantBasket } from "@/lib/restaurant-basket-context";
 
 export function ProductCard({ product }: { product: Product }) {
   const { outlet } = useOutlet();
   const { addItem } = useRestaurantBasket();
+  const { addItem: addToCart } = useCart();
+  const [added, setAdded] = useState(false);
 
   return (
     <div className="group relative rounded-lg border border-stone-200 bg-white p-4 transition-colors hover:border-amber-300">
@@ -47,7 +51,7 @@ export function ProductCard({ product }: { product: Product }) {
         </div>
       </Link>
 
-      {product.is_restaurant_item && (
+      {product.is_restaurant_item ? (
         <button
           onClick={(e) => {
             e.preventDefault();
@@ -59,6 +63,21 @@ export function ProductCard({ product }: { product: Product }) {
         >
           <Plus className="h-3.5 w-3.5" />
           Add to order
+        </button>
+      ) : (
+        <button
+          onClick={(e) => {
+            e.preventDefault();
+            if (!outlet) return;
+            addToCart(product, 1, outlet.id);
+            setAdded(true);
+            setTimeout(() => setAdded(false), 1500);
+          }}
+          disabled={!outlet}
+          className="mt-3 inline-flex w-full items-center justify-center gap-1.5 rounded-md border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs font-medium text-amber-800 hover:bg-amber-100 disabled:opacity-50"
+        >
+          <Plus className="h-3.5 w-3.5" />
+          {!outlet ? "Choose an outlet" : added ? "Added ✓" : "Add to cart"}
         </button>
       )}
     </div>
