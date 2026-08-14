@@ -121,7 +121,8 @@ export default function CartPage() {
           </span>
         </div>
         <p className="mt-1 text-xs text-stone-500">
-          Delivery fee (if applicable) will be confirmed by the outlet after checkout.
+          A flat delivery fee applies if you choose delivery at checkout — pickup has no
+          extra charge.
         </p>
 
         <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:justify-between">

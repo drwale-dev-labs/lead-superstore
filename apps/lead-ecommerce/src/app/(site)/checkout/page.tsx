@@ -165,7 +165,7 @@ export default function CheckoutPage() {
                 <div>
                   <div className="text-sm font-medium text-stone-900">Delivery</div>
                   <div className="mt-0.5 text-xs text-stone-500">
-                    We&apos;ll call to confirm the fee
+                    Flat {formatNaira(DELIVERY_FEE)} fee
                   </div>
                 </div>
               </button>
@@ -185,9 +185,9 @@ export default function CheckoutPage() {
             {method === "delivery" && (
               <div className="mt-4 space-y-4">
                 <div className="rounded-md border border-blue-200 bg-blue-50 p-3 text-xs text-blue-800">
-                  A flat delivery fee of {formatNaira(DELIVERY_FEE)} applies. Our
-                  team at {cartOutlet.name} will call you to confirm timing after
-                  your order is placed.
+                  A flat delivery fee of {formatNaira(DELIVERY_FEE)} applies — already
+                  included in your total below. Our team at {cartOutlet.name} will call
+                  you after your order is placed to confirm delivery timing.
                 </div>
                 <Field label="Delivery address" required>
                   <textarea
