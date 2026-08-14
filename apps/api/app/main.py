@@ -6,6 +6,7 @@ from app.core.errors import register_error_handlers
 from app.routers import (
     ai_tools,
     applications,
+    contracts,
     deductions,
     jobs,
     orders,
@@ -30,6 +31,7 @@ TAGS_METADATA = [
     {"name": "Transfers", "description": "HR — staff transfers between outlets and roles, with assignment history."},
     {"name": "Payroll", "description": "HR — salary structures, payroll periods, entries."},
     {"name": "Deductions", "description": "HR — loans, salary advances, fines."},
+    {"name": "Contracts", "description": "HR — generate, edit, send employment contracts; upload signed copies."},
     {"name": "AI Tools", "description": "HR — Claude-powered content generation: job ads, aptitude tests, interview questions."},
     {"name": "Jobs (HR)", "description": "HR — manage job postings (draft → publish → close)."},
     {"name": "Applications (HR)", "description": "HR — review and progress applications."},
@@ -88,6 +90,7 @@ app.include_router(verification.router, prefix="/api/verification", tags=["Verif
 app.include_router(transfers.router, prefix="/api/transfers", tags=["Transfers"])
 app.include_router(payroll.router, prefix="/api/payroll", tags=["Payroll"])
 app.include_router(deductions.router, prefix="/api/deductions", tags=["Deductions"])
+app.include_router(contracts.router, prefix="/api/contracts", tags=["Contracts"])
 app.include_router(ai_tools.router, prefix="/api/ai", tags=["AI Tools"])
 app.include_router(jobs.admin_router, prefix="/api/jobs", tags=["Jobs (HR)"])
 app.include_router(applications.admin_router, prefix="/api/applications", tags=["Applications (HR)"])

@@ -674,3 +674,32 @@ export const CategoriesResponseSchema = z.object({
 
 export type Category = z.infer<typeof CategorySchema>;
 export type Unit = "Supermarket" | "Bakery" | "Restaurant";
+
+// ============================================================================
+// Staff contracts
+// ============================================================================
+
+export const ContractStatusEnum = z.enum(["draft", "sent", "signed"]);
+
+export const ContractSchema = z.object({
+  id: z.string().uuid(),
+  staff_id: z.string().uuid(),
+  content_html: z.string(),
+  status: ContractStatusEnum,
+  generated_by: z.string().nullable().optional(),
+  generated_at: z.string(),
+  sent_at: z.string().nullable().optional(),
+  pdf_path: z.string().nullable().optional(),
+  signed_copy_path: z.string().nullable().optional(),
+  signed_uploaded_at: z.string().nullable().optional(),
+  created_at: z.string(),
+  updated_at: z.string(),
+});
+
+export const ContractsResponseSchema = z.object({
+  count: z.number(),
+  contracts: z.array(ContractSchema),
+});
+
+export type Contract = z.infer<typeof ContractSchema>;
+export type ContractStatus = z.infer<typeof ContractStatusEnum>;

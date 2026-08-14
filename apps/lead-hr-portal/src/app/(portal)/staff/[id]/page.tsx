@@ -37,6 +37,7 @@ import { ArrowRightLeft } from "lucide-react";
 import { TransferModal } from "@/components/staff/transfer-modal";
 import { AssignmentHistory } from "@/components/staff/assignment-history";
 import { SalarySection } from "@/components/staff/salary-section";
+import { ContractSection } from "@/components/staff/contract-section";
 import type { Staff } from "@/lib/types";
 
 
@@ -259,6 +260,21 @@ export default function StaffDetailPage({
           </dl>
         ) : (
           <p className="text-xs text-stone-500">No bank details on file.</p>
+        )}
+      </section>
+
+      {/* Contract */}
+      <section className="rounded-lg border border-stone-200 bg-white p-6">
+        <h2 className="mb-4 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-stone-500">
+          <FileText className="h-3.5 w-3.5" />
+          Employment contract
+        </h2>
+        {s.status === "active" ? (
+          <ContractSection staffId={s.id} />
+        ) : (
+          <p className="text-xs text-stone-500">
+            Contracts can only be generated for active staff.
+          </p>
         )}
       </section>
 

@@ -1,4 +1,6 @@
-"""Resend integration for applicant-facing transactional emails."""
+"""Resend integration for applicant-facing and staff-facing transactional emails."""
+
+import base64
 
 import resend
 
@@ -16,15 +18,50 @@ def _ensure_configured() -> None:
         _configured = True
 
 
-def _send(to_email: str, subject: str, html: str) -> None:
+def _send(
+    to_email: str,
+    subject: str,
+    html: str,
+    attachments: list[dict] | None = None,
+) -> None:
     _ensure_configured()
-    resend.Emails.send(
-        {
-            "from": settings.EMAIL_FROM_ADDRESS,
-            "to": [to_email],
-            "subject": subject,
-            "html": html,
-        }
+    payload = {
+        "from": settings.EMAIL_FROM_ADDRESS,
+        "to": [to_email],
+        "subject": subject,
+        "html": html,
+    }
+    if attachments:
+        payload["attachments"] = attachments
+    resend.Emails.send(payload)
+
+
+def send_contract_email(
+    *,
+    to_email: str,
+    staff_name: str,
+    pdf_bytes: bytes,
+    filename: str,
+) -> None:
+    """Send a generated employment contract PDF to a staff member."""
+    subject = "Your employment contract — Lead Superstore"
+    html = f"""
+    <p>Dear {staff_name},</p>
+    <p>Please find attached your employment contract with Lead Superstore.</p>
+    <p>Kindly review, print and sign the contract, then return the signed copy
+    to HR (scan or photograph and email it back, or hand it to your outlet manager).</p>
+    <p>Best regards,<br>Lead Superstore HR Team</p>
+    """
+    _send(
+        to_email,
+        subject,
+        html,
+        attachments=[
+            {
+                "filename": filename,
+                "content": base64.b64encode(pdf_bytes).decode("ascii"),
+            }
+        ],
     )
 
 
