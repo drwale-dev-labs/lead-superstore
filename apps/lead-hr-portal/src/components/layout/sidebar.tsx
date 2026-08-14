@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 import {
   LayoutDashboard,
   Users,
@@ -17,7 +18,9 @@ import {
   BarChart3,
   ShoppingBag,
   Boxes,
+  LogOut,
 } from "lucide-react";
+import { createClient } from "@/lib/supabase/client";
 
 type NavItem = {
   label: string;
@@ -59,6 +62,22 @@ const GROUPS = ["Overview", "Recruitment", "People", "Compensation", "E-commerce
 
 export function Sidebar() {
   const pathname = usePathname();
+  const router = useRouter();
+  const [email, setEmail] = useState<string | null>(null);
+
+  useEffect(() => {
+    const supabase = createClient();
+    supabase.auth.getUser().then(({ data }) => {
+      setEmail(data.user?.email ?? null);
+    });
+  }, []);
+
+  async function handleSignOut() {
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    router.push("/login");
+    router.refresh();
+  }
 
   return (
     <aside className="flex h-screen w-60 flex-col border-r border-stone-200 bg-white">
@@ -116,7 +135,16 @@ export function Sidebar() {
 
       <div className="border-t border-stone-200 px-4 py-3">
         <div className="text-xs text-stone-500">Signed in as</div>
-        <div className="text-sm font-medium text-stone-800">Admin</div>
+        <div className="truncate text-sm font-medium text-stone-800">
+          {email ?? "…"}
+        </div>
+        <button
+          onClick={handleSignOut}
+          className="mt-2 flex items-center gap-1.5 text-xs text-stone-500 hover:text-stone-800"
+        >
+          <LogOut className="h-3.5 w-3.5" />
+          Sign out
+        </button>
       </div>
     </aside>
   );
