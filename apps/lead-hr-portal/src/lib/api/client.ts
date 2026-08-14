@@ -1,4 +1,5 @@
 import axios from "axios";
+import { createClient } from "@/lib/supabase/client";
 
 const baseURL =
   process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
@@ -10,11 +11,21 @@ export const apiClient = axios.create({
 
 // Request interceptor — sets JSON content-type only when the body isn't FormData,
 // so multipart uploads get the correct browser-generated boundary header.
-// Auth bearer token will go here once we wire up Supabase Auth.
-apiClient.interceptors.request.use((config) => {
+// Also attaches the current Supabase session's access token as a Bearer
+// header, since every HR-only backend route requires a valid session.
+apiClient.interceptors.request.use(async (config) => {
   if (!(config.data instanceof FormData)) {
     config.headers["Content-Type"] = "application/json";
   }
+
+  const supabase = createClient();
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  if (session?.access_token) {
+    config.headers["Authorization"] = `Bearer ${session.access_token}`;
+  }
+
   return config;
 });
 

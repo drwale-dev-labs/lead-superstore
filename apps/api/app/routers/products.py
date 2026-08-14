@@ -1,7 +1,8 @@
 from uuid import UUID
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 
+from app.core.auth import require_hr_user
 from app.core.db import get_supabase
 
 from app.schemas.products import ProductCreate, ProductUpdate, StockUpdate
@@ -152,6 +153,7 @@ def admin_list_products(
     category_id: str | None = Query(None),
     unit: str | None = Query(None),
     search: str | None = Query(None),
+    _user_id: str = Depends(require_hr_user),
 ):
     """List ALL products for HR, including unpublished ones."""
     supabase = get_supabase()
@@ -172,7 +174,7 @@ def admin_list_products(
 
 
 @router.get("/admin/{product_id}")
-def admin_get_product(product_id: UUID):
+def admin_get_product(product_id: UUID, _user_id: str = Depends(require_hr_user)):
     """Get a single product by id (not slug) for the admin edit page."""
     supabase = get_supabase()
     response = (
@@ -187,7 +189,7 @@ def admin_get_product(product_id: UUID):
 
 
 @router.post("/admin", status_code=201)
-def admin_create_product(payload: ProductCreate):
+def admin_create_product(payload: ProductCreate, _user_id: str = Depends(require_hr_user)):
     """Create a new product. Stock defaults to 0 at every non-warehouse outlet
     (skipped entirely for restaurant items, which don't carry stock)."""
     supabase = get_supabase()
@@ -215,7 +217,9 @@ def admin_create_product(payload: ProductCreate):
 
 
 @router.patch("/admin/{product_id}")
-def admin_update_product(product_id: UUID, payload: ProductUpdate):
+def admin_update_product(
+    product_id: UUID, payload: ProductUpdate, _user_id: str = Depends(require_hr_user)
+):
     """Update a product's details, visibility, or featured status."""
     supabase = get_supabase()
 
@@ -234,7 +238,7 @@ def admin_update_product(product_id: UUID, payload: ProductUpdate):
 
 
 @router.get("/admin/{product_id}/stock")
-def admin_get_product_stock(product_id: UUID):
+def admin_get_product_stock(product_id: UUID, _user_id: str = Depends(require_hr_user)):
     """Full per-outlet stock for a product, including warehouse (unlike the
     public endpoint, which hides the warehouse row)."""
     supabase = get_supabase()
@@ -267,7 +271,9 @@ def admin_get_product_stock(product_id: UUID):
 
 
 @router.put("/admin/{product_id}/stock")
-def admin_set_stock(product_id: UUID, payload: StockUpdate):
+def admin_set_stock(
+    product_id: UUID, payload: StockUpdate, _user_id: str = Depends(require_hr_user)
+):
     """Set the stock quantity for a product at one outlet.
 
     Upserts — creates the (product_id, outlet_id) row if it doesn't exist yet,

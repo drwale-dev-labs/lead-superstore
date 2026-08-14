@@ -1,6 +1,7 @@
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.core.auth import require_hr_user
 from app.core.config import settings
 from app.core.errors import register_error_handlers
 from app.routers import (
@@ -84,21 +85,27 @@ app.include_router(customers.router, prefix="/api/customers", tags=["Customers"]
 
 
 # ============================================================================
-# HR-only routers
+# HR-only routers — gated behind a valid Supabase session (no role tiers;
+# any logged-in HR user has full access). outlets.py stays public below —
+# it's shared reference data the e-commerce app's outlet selector also needs.
 # ============================================================================
+_hr_auth = [Depends(require_hr_user)]
+app.include_router(roles.router, prefix="/api/roles", tags=["Roles"], dependencies=_hr_auth)
+app.include_router(staff.router, prefix="/api/staff", tags=["Staff"], dependencies=_hr_auth)
+app.include_router(verification.router, prefix="/api/verification", tags=["Verification"], dependencies=_hr_auth)
+app.include_router(transfers.router, prefix="/api/transfers", tags=["Transfers"], dependencies=_hr_auth)
+app.include_router(payroll.router, prefix="/api/payroll", tags=["Payroll"], dependencies=_hr_auth)
+app.include_router(deductions.router, prefix="/api/deductions", tags=["Deductions"], dependencies=_hr_auth)
+app.include_router(contracts.router, prefix="/api/contracts", tags=["Contracts"], dependencies=_hr_auth)
+app.include_router(ai_tools.router, prefix="/api/ai", tags=["AI Tools"], dependencies=_hr_auth)
+app.include_router(jobs.admin_router, prefix="/api/jobs", tags=["Jobs (HR)"], dependencies=_hr_auth)
+app.include_router(applications.admin_router, prefix="/api/applications", tags=["Applications (HR)"], dependencies=_hr_auth)
+app.include_router(orders.admin_router, prefix="/api/orders/admin", tags=["Orders (HR)"], dependencies=_hr_auth)
+app.include_router(reports.router, prefix="/api/reports", tags=["Reports"], dependencies=_hr_auth)
+
+# Shared reference data — used by both the HR portal and the e-commerce
+# app's outlet selector, which has no login of its own. Stays public.
 app.include_router(outlets.router, prefix="/api/outlets", tags=["Outlets"])
-app.include_router(roles.router, prefix="/api/roles", tags=["Roles"])
-app.include_router(staff.router, prefix="/api/staff", tags=["Staff"])
-app.include_router(verification.router, prefix="/api/verification", tags=["Verification"])
-app.include_router(transfers.router, prefix="/api/transfers", tags=["Transfers"])
-app.include_router(payroll.router, prefix="/api/payroll", tags=["Payroll"])
-app.include_router(deductions.router, prefix="/api/deductions", tags=["Deductions"])
-app.include_router(contracts.router, prefix="/api/contracts", tags=["Contracts"])
-app.include_router(ai_tools.router, prefix="/api/ai", tags=["AI Tools"])
-app.include_router(jobs.admin_router, prefix="/api/jobs", tags=["Jobs (HR)"])
-app.include_router(applications.admin_router, prefix="/api/applications", tags=["Applications (HR)"])
-app.include_router(orders.admin_router, prefix="/api/orders/admin", tags=["Orders (HR)"])
-app.include_router(reports.router, prefix="/api/reports", tags=["Reports"])
 
 # ============================================================================
 # Public e-commerce
