@@ -2,11 +2,12 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { MapPin, PackageSearch, ShoppingBag, UtensilsCrossed } from "lucide-react";
+import { MapPin, PackageSearch, ShoppingBag, User, UtensilsCrossed } from "lucide-react";
 import { useOutlet } from "@/lib/outlet-context";
 import { OutletSelectorModal } from "@/components/shop/outlet-selector";
 import { useCart } from "@/lib/cart-context";
 import { useRestaurantBasket } from "@/lib/restaurant-basket-context";
+import { useCustomerAuth } from "@/lib/customer-auth-context";
 import { RestaurantBasketDrawer } from "@/components/shop/restaurant-basket-drawer";
 
 export function SiteHeader() {
@@ -15,6 +16,7 @@ export function SiteHeader() {
   const [selectorOpen, setSelectorOpen] = useState(false);
   const [restaurantBasketOpen, setRestaurantBasketOpen] = useState(false);
   const { itemCount: restaurantItemCount } = useRestaurantBasket();
+  const { session } = useCustomerAuth();
 
   return (
     <>
@@ -52,6 +54,14 @@ export function SiteHeader() {
             >
               <PackageSearch className="h-4 w-4" />
               Track order
+            </Link>
+
+            <Link
+              href={session ? "/account/orders" : "/account/login"}
+              className="inline-flex items-center gap-1 text-stone-600 hover:text-amber-700"
+            >
+              <User className="h-4 w-4" />
+              {session ? "My orders" : "Sign in"}
             </Link>
 
             {restaurantItemCount > 0 && (

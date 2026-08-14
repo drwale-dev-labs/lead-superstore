@@ -40,3 +40,11 @@ export async function fetchProductStock(slug: string): Promise<ProductStock> {
   const { data } = await apiClient.get(`/api/products/${slug}/stock`);
   return ProductStockSchema.parse(data);
 }
+
+export async function fetchProductsByIds(ids: string[]): Promise<Product[]> {
+  if (ids.length === 0) return [];
+  const { data } = await apiClient.get("/api/products/by-ids", {
+    params: { ids: ids.join(",") },
+  });
+  return ProductsResponseSchema.parse(data).products;
+}

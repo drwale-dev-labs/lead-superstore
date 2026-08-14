@@ -8,11 +8,20 @@ export const apiClient = axios.create({
   timeout: 30000,
 });
 
+const CUSTOMER_SESSION_KEY = "lead_customer_session";
+
 apiClient.interceptors.request.use((config) => {
   // Set JSON content-type only if we're not sending FormData.
   // FormData needs the browser to set its own multipart boundary.
   if (!(config.data instanceof FormData)) {
     config.headers["Content-Type"] = "application/json";
+  }
+  if (typeof window !== "undefined") {
+    const raw = window.localStorage.getItem(CUSTOMER_SESSION_KEY);
+    if (raw) {
+      const { token } = JSON.parse(raw) as { token: string };
+      config.headers["Authorization"] = `Bearer ${token}`;
+    }
   }
   return config;
 });

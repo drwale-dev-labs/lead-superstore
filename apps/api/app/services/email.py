@@ -110,6 +110,19 @@ def send_hired_email(
     _send(to_email, subject, html)
 
 
+def send_login_code_email(*, to_email: str, code: str) -> None:
+    """Send a one-time login code for the customer order-history flow."""
+    subject = f"Your Lead Superstore login code: {code}"
+    html = f"""
+    <p>Your one-time login code is:</p>
+    <p style="font-size:28px;font-weight:700;letter-spacing:4px;">{code}</p>
+    <p>This code expires in 10 minutes. If you didn't request this, you can
+    safely ignore this email.</p>
+    <p>Best regards,<br>Lead Superstore Team</p>
+    """
+    _send(to_email, subject, html)
+
+
 def send_rejected_email(
     *,
     to_email: str,

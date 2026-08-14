@@ -7,6 +7,7 @@ from app.routers import (
     ai_tools,
     applications,
     contracts,
+    customers,
     deductions,
     jobs,
     orders,
@@ -38,6 +39,7 @@ TAGS_METADATA = [
     {"name": "Careers (Public)", "description": "Public — careers page and apply form. Consumed by e-commerce."},
     {"name": "Products", "description": "Public — product catalog. Consumed by e-commerce."},
     {"name": "Orders", "description": "Public — order creation and lookup. Consumed by e-commerce checkout."},
+    {"name": "Customers", "description": "Public — passwordless customer login (email code) and order history."},
     {"name": "Payments", "description": "Public — Paystack payment initialization, verification, and webhook."},
     {"name": "Orders (HR)", "description": "HR — view and progress customer orders (confirm, set delivery fee, mark ready/completed)."},
     {"name": "Reports", "description": "HR — headcount, hiring funnel, payroll, turnover, sales."},
@@ -78,6 +80,7 @@ def health():
 app.include_router(jobs.public_router, prefix="/api/jobs", tags=["Careers (Public)"])
 app.include_router(applications.public_router, prefix="/api/applications", tags=["Careers (Public)"])
 app.include_router(orders.public_router, prefix="/api/orders", tags=["Orders"])
+app.include_router(customers.router, prefix="/api/customers", tags=["Customers"])
 
 
 # ============================================================================

@@ -63,6 +63,25 @@ def list_products(
     return {"count": len(products), "products": products}
 
 
+@router.get("/by-ids")
+def get_products_by_ids(ids: str = Query(..., description="Comma-separated product UUIDs")):
+    """Look up multiple published products by id — used to rehydrate a past
+    order's items with live current price/availability for reorder.
+    """
+    id_list = [i for i in ids.split(",") if i]
+    if not id_list:
+        return {"count": 0, "products": []}
+    supabase = get_supabase()
+    response = (
+        supabase.table("products")
+        .select("*, product_categories(name, unit)")
+        .in_("id", id_list)
+        .eq("is_published", True)
+        .execute()
+    )
+    return {"count": len(response.data), "products": response.data}
+
+
 @router.get("/{slug}")
 def get_product_by_slug(slug: str):
     """Look up a single product by its slug (used in URLs)."""
