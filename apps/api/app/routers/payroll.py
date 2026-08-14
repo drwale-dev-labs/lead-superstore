@@ -25,6 +25,7 @@ from app.services.payroll import (
     fetch_prior_generated_periods,
     find_backdated_periods,
 )
+from app.services.payroll_entry import StaffPayrollInput, compute_entry_for_staff
 from app.services import training_bond
 
 router = APIRouter()
@@ -316,126 +317,47 @@ def generate_payroll_entries(period_id: UUID):
             continue
 
         gross = Decimal(str(active["gross_salary"]))
-
-        # === Proration: mid-period hire or mid-period termination ===
         hired_at = date.fromisoformat(staff["hired_at"]) if staff.get("hired_at") else None
         terminated_at = (
             date.fromisoformat(staff["terminated_at"]) if staff.get("terminated_at") else None
         )
-        days_worked = calendar_days_worked_in_period(
-            period_start, period_end_date, hired_at, terminated_at
-        )
-        working_days = min(days_worked, 30)
-        proration_ratio = Decimal(working_days) / Decimal("30")
 
-        # === Collect deduction items for this staff ===
-        # Loan installments and the training bond are recurring per-period amounts,
-        # so they prorate with days worked. Advances and fines are flat one-time
-        # amounts tied to a specific request/incident, so they always charge in full
-        # regardless of partial-period employment (confirmed with the business owner).
-        deduction_items: list[dict] = []
-        total_deductions = Decimal("0")
-
-        # 1. Active loans → take min(monthly_installment, balance), prorated
-        for loan in loans_by_staff.get(staff["id"], []):
-            balance = Decimal(str(loan["balance"]))
-            installment = Decimal(str(loan["monthly_installment"]))
-            full_applied = min(installment, balance)
-            applied = min(full_applied * proration_ratio, balance).quantize(Decimal("0.01"))
-            if applied > 0:
-                prorated_note = (
-                    f" — prorated for {working_days}/30 days" if working_days < 30 else ""
-                )
-                deduction_items.append(
-                    {
-                        "source_type": "loan",
-                        "source_id": loan["id"],
-                        "amount": float(applied),
-                        "description": (
-                            f"Loan installment (₦{loan['principal']:.0f} principal)"
-                            f"{prorated_note}"
-                        ),
-                    }
-                )
-                total_deductions += applied
-
-        # 2. Pending advances → take full amount, mark as applied
-        for adv in advances_by_staff.get(staff["id"], []):
-            amt = Decimal(str(adv["amount"]))
-            deduction_items.append(
-                {
-                    "source_type": "advance",
-                    "source_id": adv["id"],
-                    "amount": float(amt),
-                    "description": (
-                        f"Salary advance: {adv.get('reason') or 'no reason given'}"
-                    ),
-                }
-            )
-            total_deductions += amt
-            supabase.table("salary_advances").update(
-                {"status": "applied", "applied_to_period_id": str(period_id)}
-            ).eq("id", adv["id"]).execute()
-
-        # 3. Approved fines → take full amount, mark as applied
-        for fine in fines_by_staff.get(staff["id"], []):
-            amt = Decimal(str(fine["amount"]))
-            deduction_items.append(
-                {
-                    "source_type": "fine",
-                    "source_id": fine["id"],
-                    "amount": float(amt),
-                    "description": f"Fine: {fine['reason']}",
-                }
-            )
-            total_deductions += amt
-            supabase.table("fines").update(
-                {"status": "applied", "applied_to_period_id": str(period_id)}
-            ).eq("id", fine["id"]).execute()
-
-        # 4. Training bond (₦5,000/month deduction for months 1-6, payback months 7-12).
-        # Deduction is prorated like the loan installment above; payback is not
-        # prorated (it's the company returning money already deducted in full months).
-        bond_item = None
-        bond = None
-        if hired_at:
-            bond = training_bond.get_or_create_bond(
+        # Bond resolution/creation is a genuine side effect (may insert a new
+        # training_bonds row) — kept here, outside the pure computation below.
+        bond = (
+            training_bond.get_or_create_bond(
                 supabase, staff["id"], hired_at, existing_bonds=bonds_by_staff
             )
-            if bond:
-                bond_item = training_bond.compute_bond_item(bond, period_end_date)
-                if bond_item and bond_item["direction"] == "deduct":
-                    prorated_amount = (bond_item["amount"] * proration_ratio).quantize(
-                        Decimal("0.01")
-                    )
-                    prorated_note = (
-                        f" — prorated for {working_days}/30 days" if working_days < 30 else ""
-                    )
-                    deduction_items.append(
-                        {
-                            "source_type": "training_bond",
-                            "source_id": bond["id"],
-                            "amount": float(prorated_amount),
-                            "description": (
-                                f"Training bond deduction (month {bond_item['month_number']} of 6)"
-                                f"{prorated_note}"
-                            ),
-                        }
-                    )
-                    total_deductions += prorated_amount
-                    # Keep the item's amount in sync with what was actually charged,
-                    # so record_bond_item below commits the prorated figure, not the
-                    # flat monthly rate — this is the source of truth for running totals.
-                    bond_item["amount"] = prorated_amount
-
-        # === Compute net ===
-        net = compute_net_salary(
-            gross_salary=gross, working_days=working_days, deductions=total_deductions
+            if hired_at
+            else None
         )
-        # Bond payback is added to net pay, not part of the deductions subtraction above
-        # (not prorated — it's returning money already deducted in full months).
-        if bond_item and bond_item["direction"] == "payback":
-            net += bond_item["amount"]
+
+        staff_input = StaffPayrollInput(
+            id=staff["id"],
+            first_name=staff["first_name"],
+            last_name=staff["last_name"],
+            bank_name=staff.get("bank_name"),
+            bank_account_number=staff.get("bank_account_number"),
+            bank_account_name=staff.get("bank_account_name"),
+            hired_at=hired_at,
+            terminated_at=terminated_at,
+            gross_salary=gross,
+            loans=loans_by_staff.get(staff["id"], []),
+            advances=advances_by_staff.get(staff["id"], []),
+            fines=fines_by_staff.get(staff["id"], []),
+            bond=bond,
+        )
+        result = compute_entry_for_staff(staff_input, period_start, period_end_date)
+
+        # Mark advances/fines applied to this period
+        for adv_id in result.advance_ids_to_apply:
+            supabase.table("salary_advances").update(
+                {"status": "applied", "applied_to_period_id": str(period_id)}
+            ).eq("id", adv_id).execute()
+        for fine_id in result.fine_ids_to_apply:
+            supabase.table("fines").update(
+                {"status": "applied", "applied_to_period_id": str(period_id)}
+            ).eq("id", fine_id).execute()
 
         # Insert entry
         entry_resp = (
@@ -444,10 +366,10 @@ def generate_payroll_entries(period_id: UUID):
                 {
                     "period_id": str(period_id),
                     "staff_id": staff["id"],
-                    "gross_salary": float(gross),
-                    "working_days": working_days,
-                    "deductions": float(total_deductions),
-                    "net_pay": float(net),
+                    "gross_salary": float(result.gross_salary),
+                    "working_days": result.working_days,
+                    "deductions": float(result.total_deductions),
+                    "net_pay": float(result.net_pay),
                     "bank_name": staff.get("bank_name"),
                     "bank_account_number": staff.get("bank_account_number"),
                     "bank_account_name": staff.get("bank_account_name"),
@@ -459,17 +381,17 @@ def generate_payroll_entries(period_id: UUID):
         entry_id = entry_resp.data[0]["id"]
 
         # Snapshot deduction items
-        if deduction_items:
-            for item in deduction_items:
+        if result.deduction_items:
+            for item in result.deduction_items:
                 item["entry_id"] = entry_id
             supabase.table("payroll_entry_deductions").insert(
-                deduction_items
+                result.deduction_items
             ).execute()
 
         # Snapshot bond item (deduct items are also in payroll_entry_deductions above
         # for the deductions total; this table is the source of truth for bond state)
-        if bond_item and bond:
-            training_bond.record_bond_item(supabase, bond["id"], bond_item, entry_id)
+        if result.bond_item and bond:
+            training_bond.record_bond_item(supabase, bond["id"], result.bond_item, entry_id)
 
         # === Detect backdated periods (Phase 8b) ===
         # Never auto-included — surfaced for HR to review and explicitly approve
@@ -497,7 +419,7 @@ def generate_payroll_entries(period_id: UUID):
                 )
 
         total_gross += gross
-        total_net += net
+        total_net += result.net_pay
 
     supabase.table("payroll_periods").update(
         {"total_gross": float(total_gross), "total_net": float(total_net)}

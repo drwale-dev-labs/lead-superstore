@@ -25,7 +25,14 @@ def calendar_days_worked_in_period(
     - Full-period active staff: the full period (unchanged from prior behavior).
     - Capped to the period bounds either way, so a hired_at/terminated_at
       outside the period doesn't produce a nonsensical range.
+    - If hired_at falls entirely after the period (not yet employed) or
+      terminated_at falls entirely before it (already gone), 0 days worked.
     """
+    if hired_at and hired_at > period_end:
+        return 0
+    if terminated_at and terminated_at < period_start:
+        return 0
+
     effective_start = period_start
     if hired_at and hired_at > period_start:
         effective_start = min(hired_at, period_end)
