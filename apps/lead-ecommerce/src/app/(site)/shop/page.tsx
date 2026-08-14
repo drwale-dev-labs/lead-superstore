@@ -116,12 +116,28 @@ export default function ShopHomePage() {
           <p className="text-sm text-stone-500">Loading featured products…</p>
         )}
 
+        {featuredQuery.isError && (
+          <p className="text-sm text-red-600">
+            Couldn&apos;t load featured products right now — try refreshing.
+          </p>
+        )}
+
         {featuredQuery.data && featuredQuery.data.length > 0 && (
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
             {featuredQuery.data.map((p) => (
               <ProductCard key={p.id} product={p} />
             ))}
           </div>
+        )}
+
+        {featuredQuery.data && featuredQuery.data.length === 0 && (
+          <p className="text-sm text-stone-500">
+            No featured products right now —{" "}
+            <Link href="/shop/supermarket" className="text-amber-700 hover:underline">
+              browse the full catalog
+            </Link>
+            .
+          </p>
         )}
 
         {/* Categories quick links */}
