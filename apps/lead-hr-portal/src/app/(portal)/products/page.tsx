@@ -39,7 +39,7 @@ export default function ProductsPage() {
         </p>
         <Link
           href="/products/new"
-          className="inline-flex items-center gap-2 rounded-md bg-amber-700 px-4 py-2 text-sm font-medium text-white hover:bg-amber-800"
+          className="inline-flex items-center gap-2 rounded-md bg-orange-700 px-4 py-2 text-sm font-medium text-white hover:bg-orange-800"
         >
           <Plus className="h-4 w-4" />
           New product
@@ -54,7 +54,7 @@ export default function ProductsPage() {
               onClick={() => setUnit(tab.value)}
               className={`rounded-full border px-3.5 py-1.5 text-xs font-medium transition-colors ${
                 unit === tab.value
-                  ? "border-amber-700 bg-amber-700 text-white"
+                  ? "border-orange-700 bg-orange-700 text-white"
                   : "border-stone-200 bg-white text-stone-600 hover:border-stone-300"
               }`}
             >
@@ -69,7 +69,7 @@ export default function ProductsPage() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search products…"
-            className="w-full rounded-md border border-stone-300 bg-white py-2 pl-9 pr-3 text-sm focus:border-amber-700 focus:outline-none"
+            className="w-full rounded-md border border-stone-300 bg-white py-2 pl-9 pr-3 text-sm focus:border-orange-700 focus:outline-none"
           />
         </div>
       </div>
@@ -100,7 +100,7 @@ export default function ProductsPage() {
                   <td className="px-4 py-3">
                     <Link
                       href={`/products/${p.id}`}
-                      className="font-medium text-stone-900 hover:text-amber-700"
+                      className="font-medium text-black hover:text-orange-700"
                     >
                       {p.name}
                     </Link>
@@ -131,7 +131,7 @@ export default function ProductsPage() {
                       {p.is_featured && (
                         <span
                           title="Featured on homepage"
-                          className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-medium text-amber-800"
+                          className="inline-flex items-center gap-1 rounded-full bg-orange-100 px-2 py-0.5 text-[10px] font-medium text-orange-800"
                         >
                           <Star className="h-2.5 w-2.5" />
                           Featured

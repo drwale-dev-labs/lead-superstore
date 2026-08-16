@@ -93,7 +93,7 @@ export default function PublicJobDetailPage({
     <div className="mx-auto max-w-3xl px-6 py-12">
       <Link
         href="/careers"
-        className="inline-flex items-center gap-1.5 text-xs text-stone-500 hover:text-stone-800"
+        className="inline-flex items-center gap-1.5 text-xs text-stone-500 hover:text-black"
       >
         <ArrowLeft className="h-3.5 w-3.5" />
         All open roles
@@ -105,7 +105,7 @@ export default function PublicJobDetailPage({
           <Briefcase className="h-3.5 w-3.5" />
           {job.roles?.unit ?? "—"} unit
         </div>
-        <h1 className="mt-2 text-2xl font-bold text-stone-900">{job.title}</h1>
+        <h1 className="mt-2 text-2xl font-bold text-black">{job.title}</h1>
         <div className="mt-3 flex flex-wrap items-center justify-center gap-3 text-sm text-stone-600">
           <span className="inline-flex items-center gap-1">
             <MapPin className="h-4 w-4" /> {job.outlets?.name ?? "—"}
@@ -115,7 +115,7 @@ export default function PublicJobDetailPage({
           {job.closes_at && (
             <>
               <span className="text-stone-300">·</span>
-              <span className="inline-flex items-center gap-1 text-amber-700">
+              <span className="inline-flex items-center gap-1 text-orange-700">
                 <Calendar className="h-4 w-4" />
                 Apply before {new Date(job.closes_at).toLocaleDateString()}
               </span>
@@ -157,7 +157,7 @@ export default function PublicJobDetailPage({
               <ul className="space-y-2">
                 {job.requirements.map((req, idx) => (
                   <li key={idx} className="flex gap-3 text-sm">
-                    <span className="mt-2 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-amber-700" />
+                    <span className="mt-2 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-orange-700" />
                     <span className="text-stone-700">{req}</span>
                   </li>
                 ))}
@@ -168,18 +168,18 @@ export default function PublicJobDetailPage({
           <div className="mt-6 flex justify-center">
             <button
               onClick={() => setTab("application")}
-              className="inline-flex items-center gap-2 rounded-md bg-amber-700 px-6 py-2.5 text-sm font-medium text-white hover:bg-amber-800"
+              className="inline-flex items-center gap-2 rounded-md bg-orange-700 px-6 py-2.5 text-sm font-medium text-white hover:bg-orange-800"
             >
               Apply for this job
             </button>
           </div>
         </div>
       ) : (
-        <section className="mt-6 rounded-lg border border-amber-200 bg-amber-50 p-6">
+        <section className="mt-6 rounded-lg border border-orange-200 bg-orange-50 p-6">
           {submitted ? (
             <div className="text-center">
               <CheckCircle2 className="mx-auto h-12 w-12 text-green-600" />
-              <h3 className="mt-3 text-lg font-semibold text-stone-900">
+              <h3 className="mt-3 text-lg font-semibold text-black">
                 Application received
               </h3>
               <p className="mx-auto mt-2 max-w-md text-sm text-stone-600">
@@ -188,14 +188,14 @@ export default function PublicJobDetailPage({
               </p>
               <Link
                 href="/careers"
-                className="mt-6 inline-block rounded-md bg-white px-4 py-2 text-sm font-medium text-amber-700 ring-1 ring-amber-200 hover:bg-amber-100"
+                className="mt-6 inline-block rounded-md bg-white px-4 py-2 text-sm font-medium text-orange-700 ring-1 ring-orange-200 hover:bg-orange-100"
               >
                 View other roles
               </Link>
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-4">
-              <h2 className="text-lg font-semibold text-stone-900">
+              <h2 className="text-lg font-semibold text-black">
                 Apply for this role
               </h2>
               <p className="text-xs text-stone-600">
@@ -289,7 +289,7 @@ export default function PublicJobDetailPage({
                 <button
                   type="submit"
                   disabled={applyMut.isPending}
-                  className="inline-flex items-center gap-2 rounded-md bg-amber-700 px-5 py-2 text-sm font-medium text-white hover:bg-amber-800 disabled:opacity-50"
+                  className="inline-flex items-center gap-2 rounded-md bg-orange-700 px-5 py-2 text-sm font-medium text-white hover:bg-orange-800 disabled:opacity-50"
                 >
                   <Send className="h-4 w-4" />
                   {applyMut.isPending ? "Submitting…" : "Submit application"}
@@ -304,10 +304,10 @@ export default function PublicJobDetailPage({
 }
 
 const inputCls =
-  "w-full rounded-md border border-stone-300 bg-white px-3 py-2 text-sm focus:border-amber-700 focus:outline-none";
+  "w-full rounded-md border border-stone-300 bg-white px-3 py-2 text-sm focus:border-orange-700 focus:outline-none";
 
 const fileInputCls =
-  "w-full rounded-md border border-stone-300 bg-white px-3 py-2 text-xs file:mr-3 file:rounded file:border-0 file:bg-amber-100 file:px-2 file:py-1 file:text-xs file:font-medium file:text-amber-800 focus:border-amber-700 focus:outline-none";
+  "w-full rounded-md border border-stone-300 bg-white px-3 py-2 text-xs file:mr-3 file:rounded file:border-0 file:bg-orange-100 file:px-2 file:py-1 file:text-xs file:font-medium file:text-orange-800 focus:border-orange-700 focus:outline-none";
 
 function TabButton({
   active,
@@ -323,7 +323,7 @@ function TabButton({
       onClick={onClick}
       className={`-mb-px border-b-2 pb-3 text-sm font-medium transition-colors ${
         active
-          ? "border-amber-700 text-amber-700"
+          ? "border-orange-700 text-orange-700"
           : "border-transparent text-stone-500 hover:text-stone-700"
       }`}
     >

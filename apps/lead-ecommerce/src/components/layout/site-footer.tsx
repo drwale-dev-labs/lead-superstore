@@ -6,6 +6,9 @@ export function SiteFooter() {
             <span>© 2026 Lead Superstore. All rights reserved.</span>
             <span>Osogbo · Ilesa · Osun State, Nigeria</span>
           </div>
+          <div className="mt-4 border-t border-stone-200 pt-4 text-center text-[11px] text-stone-400">
+            Developed by Bloomstone Technologies — Engineered with Intelligence
+          </div>
         </div>
       </footer>
     );

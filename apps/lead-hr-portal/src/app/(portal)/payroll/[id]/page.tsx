@@ -120,7 +120,7 @@ export default function PeriodDetailPage({
     <div className="space-y-6">
       <Link
         href="/payroll"
-        className="inline-flex items-center gap-1.5 text-xs text-stone-500 hover:text-stone-800"
+        className="inline-flex items-center gap-1.5 text-xs text-stone-500 hover:text-black"
       >
         <ArrowLeft className="h-3.5 w-3.5" />
         All payroll periods
@@ -134,7 +134,7 @@ export default function PeriodDetailPage({
               <Calendar className="h-3.5 w-3.5" />
               {formatPeriodLabel(period.period_start, period.period_end)}
             </div>
-            <h1 className="mt-1 text-xl font-semibold text-stone-900">
+            <h1 className="mt-1 text-xl font-semibold text-black">
               {period.outlets?.name ?? "—"}
             </h1>
             <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-stone-600">
@@ -176,13 +176,13 @@ export default function PeriodDetailPage({
 
       {/* Action bar */}
       {isDraft && (
-        <div className="rounded-lg border border-amber-200 bg-amber-50 p-4">
+        <div className="rounded-lg border border-orange-200 bg-orange-50 p-4">
           <div className="flex items-start justify-between gap-4">
             <div className="min-w-0">
-              <div className="text-sm font-medium text-amber-900">
+              <div className="text-sm font-medium text-orange-900">
                 {hasEntries ? "Review entries, then approve" : "Generate entries to begin"}
               </div>
-              <p className="mt-1 text-xs text-amber-800">
+              <p className="mt-1 text-xs text-orange-800">
                 {hasEntries
                   ? "Edit individual entries below if needed. Approving locks the period and commits loan repayments."
                   : "This pulls every active employee at this outlet, snapshots their salary, applies pending loan installments, advances, and approved fines, and computes net pay."}
@@ -202,7 +202,7 @@ export default function PeriodDetailPage({
                   generateMut.mutate();
                 }}
                 disabled={generateMut.isPending}
-                className="inline-flex items-center gap-1.5 rounded-md border border-amber-300 bg-white px-3 py-2 text-xs font-medium text-amber-800 hover:bg-amber-100 disabled:opacity-50"
+                className="inline-flex items-center gap-1.5 rounded-md border border-orange-300 bg-white px-3 py-2 text-xs font-medium text-orange-800 hover:bg-orange-100 disabled:opacity-50"
               >
                 <PlayCircle className="h-3.5 w-3.5" />
                 {generateMut.isPending
@@ -405,7 +405,7 @@ export default function PeriodDetailPage({
                             ? `/payroll/${id}/entries/${entry.id}`
                             : `/staff/${entry.staff_id}`
                         }
-                        className="inline-flex items-center gap-1.5 font-medium text-stone-900 hover:text-amber-700"
+                        className="inline-flex items-center gap-1.5 font-medium text-black hover:text-orange-700"
                       >
                         {missingBank && (
                           <AlertTriangle
@@ -437,7 +437,7 @@ export default function PeriodDetailPage({
                       )}
                     </td>
                     <td className="px-4 py-3 text-right">
-                      <span className="font-semibold text-stone-900">
+                      <span className="font-semibold text-black">
                         {formatNaira(Number(entry.net_pay))}
                       </span>
                     </td>
@@ -457,7 +457,7 @@ export default function PeriodDetailPage({
                     ? `− ${formatNaira(Number(period.total_gross) - Number(period.total_net))}`
                     : "—"}
                 </td>
-                <td className="px-4 py-3 text-right font-bold text-stone-900">
+                <td className="px-4 py-3 text-right font-bold text-black">
                   {formatNaira(Number(period.total_net))}
                 </td>
               </tr>
@@ -520,7 +520,7 @@ function Stat({
         {label}
       </div>
       <div
-        className={`mt-1 ${emphasised ? "text-base font-semibold text-stone-900" : "text-sm text-stone-700"}`}
+        className={`mt-1 ${emphasised ? "text-base font-semibold text-black" : "text-sm text-stone-700"}`}
       >
         {value}
       </div>

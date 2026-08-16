@@ -28,12 +28,12 @@ export function ListEditor({ value, onChange, placeholder }: Props) {
       )}
       {value.map((item, idx) => (
         <div key={idx} className="flex items-start gap-2">
-          <span className="mt-2.5 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-amber-700" />
+          <span className="mt-2.5 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-orange-700" />
           <input
             value={item}
             onChange={(e) => update(idx, e.target.value)}
             placeholder={placeholder}
-            className="flex-1 rounded-md border border-stone-300 bg-white px-3 py-1.5 text-sm focus:border-amber-700 focus:outline-none"
+            className="flex-1 rounded-md border border-stone-300 bg-white px-3 py-1.5 text-sm focus:border-orange-700 focus:outline-none"
           />
           <button
             type="button"
@@ -48,7 +48,7 @@ export function ListEditor({ value, onChange, placeholder }: Props) {
       <button
         type="button"
         onClick={add}
-        className="inline-flex items-center gap-1.5 rounded-md border border-dashed border-stone-300 bg-white px-3 py-1.5 text-xs font-medium text-stone-600 hover:border-amber-300 hover:text-amber-700"
+        className="inline-flex items-center gap-1.5 rounded-md border border-dashed border-stone-300 bg-white px-3 py-1.5 text-xs font-medium text-stone-600 hover:border-orange-300 hover:text-orange-700"
       >
         <Plus className="h-3.5 w-3.5" />
         Add requirement

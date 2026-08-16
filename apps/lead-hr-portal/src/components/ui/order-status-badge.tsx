@@ -3,7 +3,7 @@ import type { OrderStatus } from "@/lib/types";
 const STYLES: Record<OrderStatus, { label: string; classes: string }> = {
   pending_payment: { label: "Pending payment", classes: "bg-stone-200 text-stone-700" },
   payment_received: { label: "Payment received", classes: "bg-blue-100 text-blue-800" },
-  confirmed: { label: "Confirmed", classes: "bg-amber-100 text-amber-800" },
+  confirmed: { label: "Confirmed", classes: "bg-orange-100 text-orange-800" },
   ready_for_pickup: { label: "Ready for pickup", classes: "bg-purple-100 text-purple-800" },
   out_for_delivery: { label: "Out for delivery", classes: "bg-indigo-100 text-indigo-800" },
   completed: { label: "Completed", classes: "bg-green-100 text-green-800" },

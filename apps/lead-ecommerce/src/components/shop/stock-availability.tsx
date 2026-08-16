@@ -44,7 +44,7 @@ export function StockAvailability({ slug }: { slug: string }) {
               : "border-red-200 bg-red-50"
           }`}
         >
-          <span className="font-medium text-stone-800">
+          <span className="font-medium text-black">
             {selectedOutlet.name} <span className="text-xs text-stone-500">(your outlet)</span>
           </span>
           {selectedStock && selectedStock.quantity > 0 ? (

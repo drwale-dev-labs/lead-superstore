@@ -26,14 +26,14 @@ export function AssignmentHistory({ staffId }: { staffId: string }) {
             {/* Dot */}
             <span
               className={`absolute -left-[27px] mt-1.5 flex h-3 w-3 items-center justify-center rounded-full ring-4 ring-white ${
-                isCurrent ? "bg-amber-700" : "bg-stone-300"
+                isCurrent ? "bg-orange-700" : "bg-stone-300"
               }`}
               aria-hidden
             />
 
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
-                <div className="text-sm font-medium text-stone-900">
+                <div className="text-sm font-medium text-black">
                   {a.roles?.name ?? "—"}
                   <span className="ml-2 text-xs font-normal text-stone-500">
                     @ {a.outlets?.name ?? "—"}
@@ -59,7 +59,7 @@ export function AssignmentHistory({ staffId }: { staffId: string }) {
 
               <div className="flex flex-col items-end gap-1">
                 {isCurrent && (
-                  <span className="inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-amber-800">
+                  <span className="inline-flex items-center rounded-full bg-orange-100 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-orange-800">
                     Current
                   </span>
                 )}

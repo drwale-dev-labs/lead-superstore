@@ -133,13 +133,13 @@ export default function StaffDetailPage({
           error={terminateMut.isError ? (terminateMut.error as Error).message : null}
         />
       )}
-      <Link href="/staff" className="inline-flex items-center gap-1.5 text-xs text-stone-500 hover:text-stone-800">
+      <Link href="/staff" className="inline-flex items-center gap-1.5 text-xs text-stone-500 hover:text-black">
         <ArrowLeft className="h-3.5 w-3.5" />
         All employees
       </Link>
 
       {bondNotice && (
-        <div className="rounded-md border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+        <div className="rounded-md border border-orange-200 bg-orange-50 p-4 text-sm text-orange-800">
           {bondNotice.outcome === "forfeited" ? (
             <>
               <strong>Training bond forfeited.</strong> This staff member left within the
@@ -156,7 +156,7 @@ export default function StaffDetailPage({
           )}
           <button
             onClick={() => setBondNotice(null)}
-            className="ml-3 text-amber-700 underline hover:text-amber-900"
+            className="ml-3 text-orange-700 underline hover:text-orange-900"
           >
             Dismiss
           </button>
@@ -175,7 +175,7 @@ export default function StaffDetailPage({
               size="xl"
             />
             <div>
-              <h1 className="text-xl font-semibold text-stone-900">
+              <h1 className="text-xl font-semibold text-black">
                 {s.first_name} {s.last_name}
               </h1>
               <div className="mt-1 flex items-center gap-3 text-sm text-stone-600">
@@ -301,7 +301,7 @@ export default function StaffDetailPage({
             <div key={r.id} className="rounded-md border border-stone-100 bg-stone-50 p-3">
               <div className="flex items-start justify-between">
                 <div>
-                  <div className="text-sm font-medium text-stone-900">{r.full_name}</div>
+                  <div className="text-sm font-medium text-black">{r.full_name}</div>
                   <div className="text-xs text-stone-500">
                     {r.reference_type.replace("_", " ")} · {r.relationship}
                   </div>
@@ -331,7 +331,7 @@ export default function StaffDetailPage({
             <div key={g.id} className="rounded-md border border-stone-100 bg-stone-50 p-3">
               <div className="flex items-start justify-between">
                 <div>
-                  <div className="text-sm font-medium text-stone-900">{g.full_name}</div>
+                  <div className="text-sm font-medium text-black">{g.full_name}</div>
                   <div className="text-xs text-stone-500">
                     {g.occupation} · {g.relationship}
                   </div>
@@ -358,7 +358,7 @@ function Detail({ label, value }: { label: string; value: string }) {
   return (
     <div>
       <dt className="text-[10px] uppercase tracking-wider text-stone-400">{label}</dt>
-      <dd className="text-sm text-stone-800">{value}</dd>
+      <dd className="text-sm text-black">{value}</dd>
     </div>
   );
 }
@@ -381,7 +381,7 @@ function DocumentLink({
   return (
     <button
       onClick={open}
-      className="text-xs text-amber-700 hover:underline"
+      className="text-xs text-orange-700 hover:underline"
       title={filename ?? undefined}
     >
       View document
@@ -404,7 +404,7 @@ function ActivateButton({
 }) {
   if (!canActivate) {
     return (
-      <div className="flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+      <div className="flex items-start gap-2 rounded-md border border-orange-200 bg-orange-50 px-3 py-2 text-xs text-orange-800">
         <AlertTriangle className="mt-0.5 h-3.5 w-3.5 flex-shrink-0" />
         <div>
           <div className="font-medium">Cannot activate</div>
@@ -466,7 +466,7 @@ function EditStaffModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-stone-900/40 p-4">
       <div className="w-full max-w-2xl rounded-lg bg-white shadow-xl">
         <header className="flex items-center justify-between border-b border-stone-100 px-6 py-4">
-          <h2 className="text-base font-semibold text-stone-900">Edit staff record</h2>
+          <h2 className="text-base font-semibold text-black">Edit staff record</h2>
           <button
             onClick={onClose}
             className="rounded-md p-1 text-stone-400 hover:bg-stone-100 hover:text-stone-700"
@@ -542,7 +542,7 @@ function EditStaffModal({
             </ModalField>
           </div>
 
-          <h3 className="border-b border-stone-100 pb-2 text-sm font-semibold text-stone-800">
+          <h3 className="border-b border-stone-100 pb-2 text-sm font-semibold text-black">
             Bank details
           </h3>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
@@ -592,7 +592,7 @@ function EditStaffModal({
             <button
               type="submit"
               disabled={pending}
-              className="rounded-md bg-amber-700 px-4 py-2 text-sm font-medium text-white hover:bg-amber-800 disabled:opacity-50"
+              className="rounded-md bg-orange-700 px-4 py-2 text-sm font-medium text-white hover:bg-orange-800 disabled:opacity-50"
             >
               {pending ? "Saving…" : "Save changes"}
             </button>
@@ -620,7 +620,7 @@ function TerminateModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-stone-900/40 p-4">
       <div className="w-full max-w-md rounded-lg bg-white shadow-xl">
         <header className="flex items-center justify-between border-b border-stone-100 px-6 py-4">
-          <h2 className="text-base font-semibold text-stone-900">Terminate employee</h2>
+          <h2 className="text-base font-semibold text-black">Terminate employee</h2>
           <button
             onClick={onClose}
             className="rounded-md p-1 text-stone-400 hover:bg-stone-100 hover:text-stone-700"
@@ -661,7 +661,7 @@ function TerminateModal({
 }
 
 const modalInputCls =
-  "w-full rounded-md border border-stone-300 bg-white px-3 py-2 text-sm focus:border-amber-700 focus:outline-none";
+  "w-full rounded-md border border-stone-300 bg-white px-3 py-2 text-sm focus:border-orange-700 focus:outline-none";
 
 function ModalField({
   label,

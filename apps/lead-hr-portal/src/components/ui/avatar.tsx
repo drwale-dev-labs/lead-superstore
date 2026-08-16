@@ -58,8 +58,8 @@ export function Avatar({ staffId, hasPhoto, firstName, lastName, size = "md" }: 
 // Deterministic warm-palette colour from a name. Same name → same colour.
 function colourFromName(name: string): string {
   const palette = [
-    "#B85C2A", // amber-700-ish (brand)
-    "#92400E", // amber-800
+    "#B85C2A", // orange-700-ish (brand)
+    "#92400E", // orange-800
     "#A16207", // yellow-700
     "#7C2D12", // orange-900
     "#9A3412", // orange-800

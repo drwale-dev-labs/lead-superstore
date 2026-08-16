@@ -117,7 +117,7 @@ export default function NewProductPage() {
               type="checkbox"
               checked={isRestaurantItem}
               onChange={(e) => setIsRestaurantItem(e.target.checked)}
-              className="h-4 w-4 rounded border-stone-300 text-amber-700 focus:ring-amber-700"
+              className="h-4 w-4 rounded border-stone-300 text-orange-700 focus:ring-orange-700"
             />
             Restaurant item (no stock tracking, ordered via WhatsApp)
           </label>
@@ -136,7 +136,7 @@ export default function NewProductPage() {
           <button
             type="submit"
             disabled={!canSubmit}
-            className="rounded-md bg-amber-700 px-5 py-2 text-sm font-medium text-white hover:bg-amber-800 disabled:opacity-50"
+            className="rounded-md bg-orange-700 px-5 py-2 text-sm font-medium text-white hover:bg-orange-800 disabled:opacity-50"
           >
             {mutation.isPending ? "Creating…" : "Create product"}
           </button>
@@ -147,7 +147,7 @@ export default function NewProductPage() {
 }
 
 const inputCls =
-  "w-full rounded-md border border-stone-300 bg-white px-3 py-2 text-sm focus:border-amber-700 focus:outline-none";
+  "w-full rounded-md border border-stone-300 bg-white px-3 py-2 text-sm focus:border-orange-700 focus:outline-none";
 
 function Field({
   label,

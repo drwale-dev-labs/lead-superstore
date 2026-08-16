@@ -54,7 +54,7 @@ export default function OrderConfirmationPage({
     <div className="mx-auto max-w-2xl px-6 py-12">
       <div className="text-center">
         <CheckCircle2 className="mx-auto h-14 w-14 text-green-600" />
-        <h1 className="mt-4 text-2xl font-bold text-stone-900">Order placed!</h1>
+        <h1 className="mt-4 text-2xl font-bold text-black">Order placed!</h1>
         <p className="mt-2 text-sm text-stone-600">
           Order <strong>{order.order_number}</strong> has been received.
         </p>
@@ -67,7 +67,7 @@ export default function OrderConfirmationPage({
       <div className="mt-6 text-center">
         <Link
           href="/shop"
-          className="inline-block text-sm font-medium text-amber-700 hover:underline"
+          className="inline-block text-sm font-medium text-orange-700 hover:underline"
         >
           Continue shopping
         </Link>

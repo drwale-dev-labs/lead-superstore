@@ -53,7 +53,7 @@ export default function UnitPage({
     return (
       <div className="mx-auto max-w-3xl px-6 py-16 text-center">
         <p className="text-sm text-stone-600">Section not found.</p>
-        <Link href="/shop" className="mt-3 inline-block text-sm text-amber-700 hover:underline">
+        <Link href="/shop" className="mt-3 inline-block text-sm text-orange-700 hover:underline">
           Back to shop
         </Link>
       </div>
@@ -64,14 +64,14 @@ export default function UnitPage({
     <div className="mx-auto max-w-6xl px-6 py-10">
       <Link
         href="/shop"
-        className="inline-flex items-center gap-1.5 text-xs text-stone-500 hover:text-stone-800"
+        className="inline-flex items-center gap-1.5 text-xs text-stone-500 hover:text-black"
       >
         <ArrowLeft className="h-3.5 w-3.5" />
         All departments
       </Link>
 
       <header className="mt-4">
-        <h1 className="text-2xl font-bold text-stone-900">{unit}</h1>
+        <h1 className="text-2xl font-bold text-black">{unit}</h1>
         <p className="mt-1 text-sm text-stone-600">{UNIT_TAGLINES[unit]}</p>
         {unit === "Restaurant" && (
           <div className="mt-3 rounded-md border border-orange-200 bg-orange-50 p-3 text-xs text-orange-800">
@@ -88,7 +88,7 @@ export default function UnitPage({
             onClick={() => setCategoryFilter(null)}
             className={`rounded-full border px-3.5 py-1.5 text-xs font-medium transition-colors ${
               categoryFilter === null
-                ? "border-amber-700 bg-amber-700 text-white"
+                ? "border-orange-700 bg-orange-700 text-white"
                 : "border-stone-200 bg-white text-stone-600 hover:border-stone-300"
             }`}
           >
@@ -100,7 +100,7 @@ export default function UnitPage({
               onClick={() => setCategoryFilter(c.id)}
               className={`rounded-full border px-3.5 py-1.5 text-xs font-medium transition-colors ${
                 categoryFilter === c.id
-                  ? "border-amber-700 bg-amber-700 text-white"
+                  ? "border-orange-700 bg-orange-700 text-white"
                   : "border-stone-200 bg-white text-stone-600 hover:border-stone-300"
               }`}
             >

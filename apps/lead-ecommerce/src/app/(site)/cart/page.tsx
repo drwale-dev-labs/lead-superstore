@@ -19,7 +19,7 @@ export default function CartPage() {
     return (
       <div className="mx-auto max-w-2xl px-6 py-16 text-center">
         <ShoppingBag className="mx-auto h-12 w-12 text-stone-300" />
-        <h1 className="mt-4 text-xl font-semibold text-stone-900">
+        <h1 className="mt-4 text-xl font-semibold text-black">
           Your cart is empty
         </h1>
         <p className="mt-2 text-sm text-stone-600">
@@ -27,7 +27,7 @@ export default function CartPage() {
         </p>
         <Link
           href="/shop"
-          className="mt-6 inline-flex items-center gap-2 rounded-md bg-amber-700 px-5 py-2.5 text-sm font-medium text-white hover:bg-amber-800"
+          className="mt-6 inline-flex items-center gap-2 rounded-md bg-orange-700 px-5 py-2.5 text-sm font-medium text-white hover:bg-orange-800"
         >
           Start shopping
           <ArrowRight className="h-4 w-4" />
@@ -38,7 +38,7 @@ export default function CartPage() {
 
   return (
     <div className="mx-auto max-w-4xl px-6 py-10">
-      <h1 className="text-2xl font-bold text-stone-900">Your cart</h1>
+      <h1 className="text-2xl font-bold text-black">Your cart</h1>
       {cartOutlet && (
         <p className="mt-1 text-sm text-stone-600">
           Items reserved from <strong>{cartOutlet.name}</strong>
@@ -70,7 +70,7 @@ export default function CartPage() {
             <div className="min-w-0 flex-1">
               <Link
                 href={`/shop/products/${product.slug}`}
-                className="text-sm font-medium text-stone-900 hover:text-amber-700"
+                className="text-sm font-medium text-black hover:text-orange-700"
               >
                 {product.name}
               </Link>
@@ -99,7 +99,7 @@ export default function CartPage() {
               </button>
             </div>
 
-            <div className="w-24 text-right text-sm font-semibold text-stone-900">
+            <div className="w-24 text-right text-sm font-semibold text-black">
               {formatNaira(Number(product.price) * quantity)}
             </div>
 
@@ -118,7 +118,7 @@ export default function CartPage() {
       <div className="mt-6 rounded-lg border border-stone-200 bg-white p-5">
         <div className="flex items-center justify-between text-sm">
           <span className="text-stone-600">Subtotal</span>
-          <span className="font-semibold text-stone-900">
+          <span className="font-semibold text-black">
             {formatNaira(subtotal)}
           </span>
         </div>
@@ -136,7 +136,7 @@ export default function CartPage() {
           </Link>
           <button
             onClick={() => router.push("/checkout")}
-            className="inline-flex items-center justify-center gap-2 rounded-md bg-amber-700 px-6 py-2.5 text-sm font-medium text-white hover:bg-amber-800"
+            className="inline-flex items-center justify-center gap-2 rounded-md bg-orange-700 px-6 py-2.5 text-sm font-medium text-white hover:bg-orange-800"
           >
             Proceed to checkout
             <ArrowRight className="h-4 w-4" />

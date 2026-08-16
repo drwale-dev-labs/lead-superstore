@@ -41,24 +41,42 @@ export default function ShopHomePage() {
   return (
     <>
       {/* Hero */}
-      <section className="bg-gradient-to-br from-amber-50 via-stone-50 to-white">
-        <div className="mx-auto max-w-6xl px-6 py-12 sm:py-16">
+      <section className="relative overflow-hidden bg-gradient-to-br from-orange-100 via-orange-50 to-stone-50">
+        {/* Decorative background blobs */}
+        <div className="pointer-events-none absolute inset-0 overflow-hidden">
+          <div className="absolute -left-24 -top-24 h-72 w-72 rounded-full bg-orange-300/30 blur-3xl" />
+          <div className="absolute -right-16 top-10 h-80 w-80 rounded-full bg-orange-200/40 blur-3xl" />
+          <div className="absolute bottom-0 left-1/3 h-56 w-56 rounded-full bg-orange-200/30 blur-3xl" />
+          <div
+            className="absolute inset-0 opacity-[0.05]"
+            style={{
+              backgroundImage:
+                "radial-gradient(circle, #000000 1px, transparent 1px)",
+              backgroundSize: "24px 24px",
+            }}
+          />
+        </div>
+
+        <div className="relative mx-auto max-w-6xl px-6 py-16 sm:py-24">
           <div className="max-w-2xl">
-            <p className="inline-flex items-center gap-1.5 rounded-full bg-amber-100 px-3 py-1 text-xs font-medium uppercase tracking-wider text-amber-800">
+            <p className="inline-flex items-center gap-1.5 rounded-full bg-orange-100 px-3 py-1 text-xs font-medium uppercase tracking-wider text-orange-700 ring-1 ring-orange-200">
               <Sparkles className="h-3 w-3" />
               Now serving Osogbo &amp; Ilesa
             </p>
-            <h1 className="mt-4 text-3xl font-bold text-stone-900 sm:text-4xl">
-              Everything you need, from one trusted store — We've got it all.
+            <h1 className="mt-4 text-4xl font-bold tracking-tight text-black sm:text-5xl">
+              We have it <span className="text-orange-600">all!</span>
             </h1>
-            <p className="mt-3 text-base text-stone-600">
+            <p className="mt-3 text-lg text-black">
+              Everything you need, from one trusted store.
+            </p>
+            <p className="mt-3 text-base text-black/80">
               Lead Superstore brings supermarket, bakery, and restaurant under one roof.
               Shop online, pick up at your nearest outlet, or have it delivered.
             </p>
-            <div className="mt-6 flex flex-wrap items-center gap-3">
+            <div className="mt-8 flex flex-wrap items-center gap-3">
               <Link
                 href="/shop/supermarket"
-                className="inline-flex items-center gap-2 rounded-md bg-amber-700 px-5 py-2.5 text-sm font-medium text-white hover:bg-amber-800"
+                className="inline-flex items-center gap-2 rounded-md bg-orange-700 px-5 py-2.5 text-sm font-medium text-white shadow-sm shadow-orange-700/20 transition-colors hover:bg-orange-800"
               >
                 Start shopping
                 <ArrowRight className="h-4 w-4" />
@@ -66,7 +84,7 @@ export default function ShopHomePage() {
               {outlet && (
                 <span className="inline-flex items-center gap-1.5 text-xs text-stone-600">
                   <MapPin className="h-3.5 w-3.5" />
-                  Picking up from <strong className="text-stone-800">{outlet.name}</strong>
+                  Picking up from <strong className="text-black">{outlet.name}</strong>
                 </span>
               )}
             </div>
@@ -76,7 +94,7 @@ export default function ShopHomePage() {
 
       {/* Units */}
       <section className="mx-auto max-w-6xl px-6 py-12">
-        <h2 className="text-xs font-semibold uppercase tracking-wider text-stone-500">
+        <h2 className="text-xs font-semibold uppercase tracking-wider text-black">
           Three stores, one place
         </h2>
         <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
@@ -84,12 +102,14 @@ export default function ShopHomePage() {
             <Link
               key={u.value}
               href={`/shop/${u.value.toLowerCase()}`}
-              className="group rounded-lg border border-stone-200 bg-white p-6 transition-all hover:border-amber-300 hover:shadow-md"
+              className="group rounded-xl border border-stone-200 bg-white p-6 shadow-sm transition-all hover:-translate-y-0.5 hover:border-orange-300 hover:shadow-lg"
             >
-              <Store className="h-6 w-6 text-amber-700" />
-              <h3 className="mt-3 text-base font-semibold text-stone-900">{u.label}</h3>
+              <span className="inline-flex h-11 w-11 items-center justify-center rounded-lg bg-gradient-to-br from-orange-100 to-orange-100 text-orange-700">
+                <Store className="h-5 w-5" />
+              </span>
+              <h3 className="mt-3 text-base font-semibold text-black">{u.label}</h3>
               <p className="mt-1 text-xs text-stone-500">{u.tagline}</p>
-              <span className="mt-4 inline-flex items-center gap-1 text-xs font-medium text-amber-700 group-hover:underline">
+              <span className="mt-4 inline-flex items-center gap-1 text-xs font-medium text-orange-700 group-hover:underline">
                 Browse {u.label.toLowerCase()}
                 <ArrowRight className="h-3 w-3" />
               </span>
@@ -101,12 +121,12 @@ export default function ShopHomePage() {
       {/* Featured products */}
       <section className="mx-auto max-w-6xl px-6 pb-16">
         <div className="mb-4 flex items-end justify-between">
-          <h2 className="text-xs font-semibold uppercase tracking-wider text-stone-500">
+          <h2 className="text-xs font-semibold uppercase tracking-wider text-black">
             Featured this week
           </h2>
           <Link
             href="/shop/supermarket"
-            className="text-xs font-medium text-amber-700 hover:underline"
+            className="text-xs font-medium text-orange-700 hover:underline"
           >
             View all →
           </Link>
@@ -133,7 +153,7 @@ export default function ShopHomePage() {
         {featuredQuery.data && featuredQuery.data.length === 0 && (
           <p className="text-sm text-stone-500">
             No featured products right now —{" "}
-            <Link href="/shop/supermarket" className="text-amber-700 hover:underline">
+            <Link href="/shop/supermarket" className="text-orange-700 hover:underline">
               browse the full catalog
             </Link>
             .
@@ -142,7 +162,7 @@ export default function ShopHomePage() {
 
         {/* Categories quick links */}
         <div className="mt-12">
-          <h2 className="mb-4 text-xs font-semibold uppercase tracking-wider text-stone-500">
+          <h2 className="mb-4 text-xs font-semibold uppercase tracking-wider text-black">
             Browse by category
           </h2>
           {categoriesQuery.data && (
@@ -152,13 +172,13 @@ export default function ShopHomePage() {
                 if (cats.length === 0) return null;
                 return (
                   <div key={u.value}>
-                    <h3 className="text-sm font-semibold text-stone-700">{u.label}</h3>
+                    <h3 className="text-sm font-semibold text-black">{u.label}</h3>
                     <div className="mt-2 flex flex-wrap gap-2">
                       {cats.map((c) => (
                         <Link
                           key={c.id}
                           href={`/shop/${u.value.toLowerCase()}/${c.id}`}
-                          className="rounded-full border border-stone-200 bg-white px-3 py-1.5 text-xs font-medium text-stone-700 hover:border-amber-300 hover:text-amber-700"
+                          className="rounded-full border border-stone-200 bg-white px-3 py-1.5 text-xs font-medium text-stone-700 hover:border-orange-300 hover:text-orange-700"
                         >
                           {c.name}
                         </Link>

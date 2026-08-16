@@ -66,7 +66,7 @@ export function ProductDetailClient({ slug }: { slug: string }) {
     <div className="mx-auto max-w-5xl px-6 py-10">
       <Link
         href={unitSlug ? `/shop/${unitSlug}` : "/shop"}
-        className="inline-flex items-center gap-1.5 text-xs text-stone-500 hover:text-stone-800"
+        className="inline-flex items-center gap-1.5 text-xs text-stone-500 hover:text-black"
       >
         <ArrowLeft className="h-3.5 w-3.5" />
         {unit ? `Back to ${unit}` : "Back to shop"}
@@ -94,8 +94,8 @@ export function ProductDetailClient({ slug }: { slug: string }) {
           <div className="text-xs uppercase tracking-wider text-stone-500">
             {product.product_categories?.name ?? product.category_id}
           </div>
-          <h1 className="mt-1 text-2xl font-bold text-stone-900">{product.name}</h1>
-          <div className="mt-3 text-2xl font-semibold text-amber-700">
+          <h1 className="mt-1 text-2xl font-bold text-black">{product.name}</h1>
+          <div className="mt-3 text-2xl font-semibold text-orange-700">
             {formatNaira(Number(product.price))}
           </div>
 
@@ -171,7 +171,7 @@ export function ProductDetailClient({ slug }: { slug: string }) {
                     setTimeout(() => setAdded(false), 2000);
                   }}
                   disabled={!canAddToCart}
-                  className="inline-flex flex-1 items-center justify-center gap-2 rounded-md bg-amber-700 px-5 py-2.5 text-sm font-medium text-white hover:bg-amber-800 disabled:cursor-not-allowed disabled:bg-stone-300"
+                  className="inline-flex flex-1 items-center justify-center gap-2 rounded-md bg-orange-700 px-5 py-2.5 text-sm font-medium text-white hover:bg-orange-800 disabled:cursor-not-allowed disabled:bg-stone-300"
                 >
                   <ShoppingCart className="h-4 w-4" />
                   {!outlet

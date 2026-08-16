@@ -1,7 +1,7 @@
 import type { PayrollStatus } from "@/lib/types";
 
 const STYLES: Record<PayrollStatus, { label: string; classes: string }> = {
-  draft: { label: "Draft", classes: "bg-amber-100 text-amber-800" },
+  draft: { label: "Draft", classes: "bg-orange-100 text-orange-800" },
   approved: { label: "Approved", classes: "bg-blue-100 text-blue-800" },
   paid: { label: "Paid", classes: "bg-green-100 text-green-800" },
 };

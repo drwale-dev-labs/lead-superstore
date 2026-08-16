@@ -1,7 +1,7 @@
 import type { StaffStatus } from "@/lib/types";
 
 const STATUS_STYLES: Record<StaffStatus, { label: string; classes: string }> = {
-  onboarding: { label: "Onboarding", classes: "bg-amber-100 text-amber-800" },
+  onboarding: { label: "Onboarding", classes: "bg-orange-100 text-orange-800" },
   pending_verification: {
     label: "Pending verification",
     classes: "bg-orange-100 text-orange-800",

@@ -26,8 +26,8 @@ export function OutletSelectorModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-stone-900/40 p-4">
       <div className="w-full max-w-md rounded-lg bg-white shadow-xl">
         <header className="border-b border-stone-100 px-6 py-4">
-          <h2 className="flex items-center gap-2 text-base font-semibold text-stone-900">
-            <Store className="h-4 w-4 text-amber-700" />
+          <h2 className="flex items-center gap-2 text-base font-semibold text-black">
+            <Store className="h-4 w-4 text-orange-700" />
             Choose your outlet
           </h2>
           <p className="mt-1 text-xs text-stone-600">
@@ -47,23 +47,23 @@ export function OutletSelectorModal({
                     onClick={() => pick(o)}
                     className={`flex w-full items-start gap-3 rounded-md border p-3 text-left transition-colors ${
                       isCurrent
-                        ? "border-amber-700 bg-amber-50"
-                        : "border-stone-200 hover:border-amber-300 hover:bg-amber-50/30"
+                        ? "border-orange-700 bg-orange-50"
+                        : "border-stone-200 hover:border-orange-300 hover:bg-orange-50/30"
                     }`}
                   >
                     <MapPin
                       className={`mt-0.5 h-4 w-4 flex-shrink-0 ${
-                        isCurrent ? "text-amber-700" : "text-stone-400"
+                        isCurrent ? "text-orange-700" : "text-stone-400"
                       }`}
                     />
                     <div className="flex-1">
-                      <div className="text-sm font-medium text-stone-900">{o.name}</div>
+                      <div className="text-sm font-medium text-black">{o.name}</div>
                       {o.city && (
                         <div className="text-xs text-stone-500">{o.city}</div>
                       )}
                     </div>
                     {isCurrent && (
-                      <Check className="mt-0.5 h-4 w-4 flex-shrink-0 text-amber-700" />
+                      <Check className="mt-0.5 h-4 w-4 flex-shrink-0 text-orange-700" />
                     )}
                   </button>
                 </li>
@@ -76,7 +76,7 @@ export function OutletSelectorModal({
           <footer className="flex justify-end border-t border-stone-100 px-6 py-3">
             <button
               onClick={onClose}
-              className="text-xs text-stone-500 hover:text-stone-800"
+              className="text-xs text-stone-500 hover:text-black"
             >
               Cancel
             </button>

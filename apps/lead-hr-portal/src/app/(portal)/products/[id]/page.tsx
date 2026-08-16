@@ -74,7 +74,7 @@ export default function ProductEditPage({
     <div className="space-y-6">
       <Link
         href="/products"
-        className="inline-flex items-center gap-1.5 text-xs text-stone-500 hover:text-stone-800"
+        className="inline-flex items-center gap-1.5 text-xs text-stone-500 hover:text-black"
       >
         <ArrowLeft className="h-3.5 w-3.5" />
         All products
@@ -83,7 +83,7 @@ export default function ProductEditPage({
       <header className="rounded-lg border border-stone-200 bg-white p-6">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <h1 className="text-xl font-semibold text-stone-900">{product.name}</h1>
+            <h1 className="text-xl font-semibold text-black">{product.name}</h1>
             <div className="mt-1 text-xs text-stone-500">
               {product.sku && <span>{product.sku} · </span>}
               {product.product_categories?.unit ?? "—"} ·{" "}
@@ -95,7 +95,7 @@ export default function ProductEditPage({
 
       {/* Edit form */}
       <section className="rounded-lg border border-stone-200 bg-white p-6 space-y-4">
-        <h2 className="text-sm font-semibold text-stone-800 border-b border-stone-100 pb-2">
+        <h2 className="text-sm font-semibold text-black border-b border-stone-100 pb-2">
           Product details
         </h2>
 
@@ -147,7 +147,7 @@ export default function ProductEditPage({
               type="checkbox"
               checked={isPublished}
               onChange={(e) => setIsPublished(e.target.checked)}
-              className="h-4 w-4 rounded border-stone-300 text-amber-700 focus:ring-amber-700"
+              className="h-4 w-4 rounded border-stone-300 text-orange-700 focus:ring-orange-700"
             />
             Published (visible to customers)
           </label>
@@ -156,7 +156,7 @@ export default function ProductEditPage({
               type="checkbox"
               checked={isFeatured}
               onChange={(e) => setIsFeatured(e.target.checked)}
-              className="h-4 w-4 rounded border-stone-300 text-amber-700 focus:ring-amber-700"
+              className="h-4 w-4 rounded border-stone-300 text-orange-700 focus:ring-orange-700"
             />
             Featured on homepage
           </label>
@@ -170,7 +170,7 @@ export default function ProductEditPage({
           <button
             onClick={() => mutation.mutate()}
             disabled={mutation.isPending}
-            className="inline-flex items-center gap-1.5 rounded-md bg-amber-700 px-5 py-2 text-sm font-medium text-white hover:bg-amber-800 disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 rounded-md bg-orange-700 px-5 py-2 text-sm font-medium text-white hover:bg-orange-800 disabled:opacity-50"
           >
             <Save className="h-4 w-4" />
             {mutation.isPending ? "Saving…" : "Save changes"}
@@ -180,7 +180,7 @@ export default function ProductEditPage({
 
       {/* Stock */}
       <section className="rounded-lg border border-stone-200 bg-white p-6">
-        <h2 className="mb-4 flex items-center gap-2 text-sm font-semibold text-stone-800 border-b border-stone-100 pb-2">
+        <h2 className="mb-4 flex items-center gap-2 text-sm font-semibold text-black border-b border-stone-100 pb-2">
           <Boxes className="h-4 w-4" />
           Stock by outlet
         </h2>
@@ -191,7 +191,7 @@ export default function ProductEditPage({
 }
 
 const inputCls =
-  "w-full rounded-md border border-stone-300 bg-white px-3 py-2 text-sm focus:border-amber-700 focus:outline-none";
+  "w-full rounded-md border border-stone-300 bg-white px-3 py-2 text-sm focus:border-orange-700 focus:outline-none";
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (

@@ -97,7 +97,7 @@ export default function AccountOrdersPage() {
     <div className="mx-auto max-w-3xl px-6 py-10">
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-stone-900">Your orders</h1>
+          <h1 className="text-2xl font-bold text-black">Your orders</h1>
           <p className="mt-1 text-sm text-stone-600">
             Signed in as {session.customer.email}
           </p>
@@ -107,7 +107,7 @@ export default function AccountOrdersPage() {
             logout();
             router.push("/shop");
           }}
-          className="inline-flex items-center gap-1.5 text-xs text-stone-500 hover:text-stone-800"
+          className="inline-flex items-center gap-1.5 text-xs text-stone-500 hover:text-black"
         >
           <LogOut className="h-3.5 w-3.5" />
           Sign out
@@ -122,7 +122,7 @@ export default function AccountOrdersPage() {
       )}
 
       {reorderError && (
-        <div className="mt-6 rounded-md border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
+        <div className="mt-6 rounded-md border border-orange-200 bg-orange-50 p-3 text-xs text-orange-800">
           {reorderError}{" "}
           <Link href="/cart" className="font-medium underline">
             Go to cart
@@ -136,7 +136,7 @@ export default function AccountOrdersPage() {
           <p className="mt-4 text-sm text-stone-600">You haven't placed an order yet.</p>
           <Link
             href="/shop"
-            className="mt-4 inline-block text-sm font-medium text-amber-700 hover:underline"
+            className="mt-4 inline-block text-sm font-medium text-orange-700 hover:underline"
           >
             Start shopping
           </Link>
@@ -157,7 +157,7 @@ export default function AccountOrdersPage() {
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
                     <div className="flex items-center gap-2">
-                      <span className="text-sm font-semibold text-stone-900">
+                      <span className="text-sm font-semibold text-black">
                         {order.order_number}
                       </span>
                       <span className="rounded-full bg-stone-100 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-stone-600">
@@ -174,14 +174,14 @@ export default function AccountOrdersPage() {
                     </p>
                   </div>
                   <div className="text-right">
-                    <div className="text-sm font-semibold text-stone-900">
+                    <div className="text-sm font-semibold text-black">
                       {formatNaira(Number(order.total))}
                     </div>
                     {canReorder && (
                       <button
                         onClick={() => reorderMut.mutate(order)}
                         disabled={reorderingId === order.id}
-                        className="mt-2 inline-flex items-center gap-1.5 rounded-md border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs font-medium text-amber-800 hover:bg-amber-100 disabled:opacity-50"
+                        className="mt-2 inline-flex items-center gap-1.5 rounded-md border border-orange-200 bg-orange-50 px-3 py-1.5 text-xs font-medium text-orange-800 hover:bg-orange-100 disabled:opacity-50"
                       >
                         <RotateCcw className="h-3.5 w-3.5" />
                         {reorderingId === order.id ? "Adding…" : "Reorder"}

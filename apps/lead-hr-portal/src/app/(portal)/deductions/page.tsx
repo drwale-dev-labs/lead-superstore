@@ -64,7 +64,7 @@ export default function DeductionsPage() {
         </p>
         <button
           onClick={() => setModalOpen(true)}
-          className="inline-flex items-center gap-2 rounded-md bg-amber-700 px-4 py-2 text-sm font-medium text-white hover:bg-amber-800"
+          className="inline-flex items-center gap-2 rounded-md bg-orange-700 px-4 py-2 text-sm font-medium text-white hover:bg-orange-800"
         >
           <Plus className="h-4 w-4" />
           New {modalType}
@@ -82,8 +82,8 @@ export default function DeductionsPage() {
               onClick={() => setTab(t.value)}
               className={`-mb-px inline-flex items-center gap-2 border-b-2 px-4 py-2.5 text-sm font-medium transition-colors ${
                 isActive
-                  ? "border-amber-700 text-amber-700"
-                  : "border-transparent text-stone-600 hover:text-stone-900"
+                  ? "border-orange-700 text-orange-700"
+                  : "border-transparent text-stone-600 hover:text-black"
               }`}
             >
               <Icon className="h-4 w-4" />
@@ -152,7 +152,7 @@ function LoansList({ query }: { query: ReturnType<typeof useQuery<Loan[]>> }) {
           {query.data.map((l) => (
             <tr key={l.id} className="hover:bg-stone-50">
               <td className="px-4 py-3">
-                <div className="font-medium text-stone-900">
+                <div className="font-medium text-black">
                   {l.staff?.first_name} {l.staff?.last_name}
                 </div>
                 {l.notes && (
@@ -167,7 +167,7 @@ function LoansList({ query }: { query: ReturnType<typeof useQuery<Loan[]>> }) {
                   className={
                     Number(l.balance) === 0
                       ? "text-stone-400"
-                      : "font-semibold text-stone-900"
+                      : "font-semibold text-black"
                   }
                 >
                   {formatNaira(Number(l.balance))}
@@ -203,7 +203,7 @@ function LoansList({ query }: { query: ReturnType<typeof useQuery<Loan[]>> }) {
 
 function LoanStatusBadge({ status }: { status: Loan["status"] }) {
   const styles = {
-    active: "bg-amber-100 text-amber-800",
+    active: "bg-orange-100 text-orange-800",
     paid_off: "bg-green-100 text-green-800",
     cancelled: "bg-stone-200 text-stone-700",
   };
@@ -262,7 +262,7 @@ function AdvancesList({
         <tbody className="divide-y divide-stone-100">
           {query.data.map((a) => (
             <tr key={a.id} className="hover:bg-stone-50">
-              <td className="px-4 py-3 font-medium text-stone-900">
+              <td className="px-4 py-3 font-medium text-black">
                 {a.staff?.first_name} {a.staff?.last_name}
               </td>
               <td className="px-4 py-3 text-right text-stone-700">
@@ -296,7 +296,7 @@ function AdvancesList({
 
 function AdvanceStatusBadge({ status }: { status: Advance["status"] }) {
   const styles = {
-    pending: "bg-amber-100 text-amber-800",
+    pending: "bg-orange-100 text-orange-800",
     applied: "bg-green-100 text-green-800",
     cancelled: "bg-stone-200 text-stone-700",
   };
@@ -350,7 +350,7 @@ function FinesList({ query }: { query: ReturnType<typeof useQuery<Fine[]>> }) {
         <tbody className="divide-y divide-stone-100">
           {query.data.map((f) => (
             <tr key={f.id} className="hover:bg-stone-50">
-              <td className="px-4 py-3 font-medium text-stone-900">
+              <td className="px-4 py-3 font-medium text-black">
                 {f.staff?.first_name} {f.staff?.last_name}
               </td>
               <td className="px-4 py-3 text-right text-stone-700">
@@ -397,7 +397,7 @@ function FinesList({ query }: { query: ReturnType<typeof useQuery<Fine[]>> }) {
 
 function FineStatusBadge({ status }: { status: Fine["status"] }) {
   const styles = {
-    pending: "bg-amber-100 text-amber-800",
+    pending: "bg-orange-100 text-orange-800",
     approved: "bg-blue-100 text-blue-800",
     applied: "bg-green-100 text-green-800",
     cancelled: "bg-stone-200 text-stone-700",

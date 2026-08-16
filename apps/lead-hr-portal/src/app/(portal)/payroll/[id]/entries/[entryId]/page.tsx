@@ -91,7 +91,7 @@ export default function EntryEditPage({
     <div className="space-y-6">
       <Link
         href={`/payroll/${id}`}
-        className="inline-flex items-center gap-1.5 text-xs text-stone-500 hover:text-stone-800"
+        className="inline-flex items-center gap-1.5 text-xs text-stone-500 hover:text-black"
       >
         <ArrowLeft className="h-3.5 w-3.5" />
         Back to period
@@ -101,7 +101,7 @@ export default function EntryEditPage({
       <header className="rounded-lg border border-stone-200 bg-white p-6">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <h1 className="text-xl font-semibold text-stone-900">
+            <h1 className="text-xl font-semibold text-black">
               {entry.staff?.first_name} {entry.staff?.last_name}
             </h1>
             <div className="mt-1 flex items-center gap-3 text-xs text-stone-600">
@@ -139,7 +139,7 @@ export default function EntryEditPage({
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         {/* Edit form */}
         <div className="lg:col-span-2 rounded-lg border border-stone-200 bg-white p-6 space-y-4">
-          <h2 className="text-sm font-semibold text-stone-800 border-b border-stone-100 pb-2">
+          <h2 className="text-sm font-semibold text-black border-b border-stone-100 pb-2">
             Edit entry
           </h2>
 
@@ -196,7 +196,7 @@ export default function EntryEditPage({
               />
             </Field>
             <Field label="Computed net pay" icon={Calculator}>
-              <div className="rounded-md border border-stone-200 bg-stone-50 px-3 py-2 text-sm font-semibold text-stone-900">
+              <div className="rounded-md border border-stone-200 bg-stone-50 px-3 py-2 text-sm font-semibold text-black">
                 {previewNet !== null ? formatNaira(previewNet) : "—"}
               </div>
             </Field>
@@ -228,7 +228,7 @@ export default function EntryEditPage({
               <button
                 onClick={() => mutation.mutate()}
                 disabled={!isDirty || mutation.isPending}
-                className="inline-flex items-center gap-1.5 rounded-md bg-amber-700 px-4 py-2 text-sm font-medium text-white hover:bg-amber-800 disabled:opacity-50"
+                className="inline-flex items-center gap-1.5 rounded-md bg-orange-700 px-4 py-2 text-sm font-medium text-white hover:bg-orange-800 disabled:opacity-50"
               >
                 <Save className="h-3.5 w-3.5" />
                 {mutation.isPending ? "Saving…" : "Save changes"}
@@ -238,7 +238,7 @@ export default function EntryEditPage({
 
           {/* Mutation hint about regeneration */}
           {!isLocked && (
-            <div className="rounded-md border border-amber-100 bg-amber-50/50 p-3 text-[11px] text-amber-800">
+            <div className="rounded-md border border-orange-100 bg-orange-50/50 p-3 text-[11px] text-orange-800">
               <strong>Heads up:</strong> manual edits are preserved unless you
               regenerate the whole period. If you regenerate, this entry will be rebuilt
               from the current salary structure and pending deductions.
@@ -259,7 +259,7 @@ export default function EntryEditPage({
 }
 
 const inputCls =
-  "w-full rounded-md border border-stone-300 bg-white px-3 py-2 text-sm focus:border-amber-700 focus:outline-none disabled:bg-stone-50 disabled:text-stone-500";
+  "w-full rounded-md border border-stone-300 bg-white px-3 py-2 text-sm focus:border-orange-700 focus:outline-none disabled:bg-stone-50 disabled:text-stone-500";
 
 function Field({
   label,

@@ -7,7 +7,7 @@ import { LoadingState } from "@/components/ui/states";
 import { formatNaira } from "@/lib/types";
 
 const SOURCE_META = {
-  loan: { label: "Loan", icon: Banknote, color: "text-amber-700" },
+  loan: { label: "Loan", icon: Banknote, color: "text-orange-700" },
   advance: { label: "Advance", icon: Receipt, color: "text-blue-700" },
   fine: { label: "Fine", icon: AlertCircle, color: "text-red-700" },
   training_bond: { label: "Training bond", icon: GraduationCap, color: "text-purple-700" },
@@ -61,7 +61,7 @@ export function DeductionBreakdown({ entryId }: { entryId: string }) {
               <div className="text-[10px] uppercase tracking-wider text-blue-600">
                 Backdated catch-up
               </div>
-              <div className="text-sm text-stone-800">
+              <div className="text-sm text-black">
                 {c.description ?? `${c.days_owed} days owed`}
               </div>
             </div>
@@ -79,7 +79,7 @@ export function DeductionBreakdown({ entryId }: { entryId: string }) {
               <div className="text-[10px] uppercase tracking-wider text-purple-600">
                 Training bond payback
               </div>
-              <div className="text-sm text-stone-800">
+              <div className="text-sm text-black">
                 Month {payback.month_number} of 12 — added to net pay
               </div>
             </div>
@@ -103,7 +103,7 @@ export function DeductionBreakdown({ entryId }: { entryId: string }) {
                 <div className="text-[10px] uppercase tracking-wider text-stone-500">
                   {meta.label}
                 </div>
-                <div className="text-sm text-stone-800">
+                <div className="text-sm text-black">
                   {d.description ?? "—"}
                 </div>
               </div>

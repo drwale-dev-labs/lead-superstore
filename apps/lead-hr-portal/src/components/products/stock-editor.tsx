@@ -71,7 +71,7 @@ export function StockEditor({ productId }: { productId: string }) {
             <div className="flex items-center gap-2">
               {isWarehouse && <Warehouse className="h-4 w-4 text-stone-400" />}
               <div>
-                <div className="text-sm font-medium text-stone-800">
+                <div className="text-sm font-medium text-black">
                   {row.outlets?.name ?? "Outlet"}
                 </div>
                 {row.outlets?.city && (
@@ -88,7 +88,7 @@ export function StockEditor({ productId }: { productId: string }) {
                 onChange={(e) =>
                   setDrafts((prev) => ({ ...prev, [row.outlet_id]: e.target.value }))
                 }
-                className="w-24 rounded-md border border-stone-300 bg-white px-2 py-1.5 text-right text-sm focus:border-amber-700 focus:outline-none"
+                className="w-24 rounded-md border border-stone-300 bg-white px-2 py-1.5 text-right text-sm focus:border-orange-700 focus:outline-none"
               />
               <button
                 onClick={() =>

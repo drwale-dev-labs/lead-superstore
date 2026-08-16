@@ -91,11 +91,11 @@ export default function RoleDirectoryPage() {
                     }
                     className={`rounded-lg border bg-white p-4 text-left transition-colors ${
                       isSelected
-                        ? "border-amber-700 ring-1 ring-amber-700"
+                        ? "border-orange-700 ring-1 ring-orange-700"
                         : "border-stone-200 hover:border-stone-300"
                     }`}
                   >
-                    <div className="text-sm font-medium text-stone-900">
+                    <div className="text-sm font-medium text-black">
                       {role.name}
                     </div>
                     <div className="mt-1 text-xs text-stone-500">{role.unit}</div>

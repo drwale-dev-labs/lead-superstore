@@ -28,7 +28,7 @@ export function Topbar() {
 
   return (
     <header className="flex h-14 items-center justify-between border-b border-stone-200 bg-white px-6">
-      <h1 className="text-base font-semibold text-stone-800">{title}</h1>
+      <h1 className="text-base font-semibold text-black">{title}</h1>
       <div className="text-xs text-stone-500">
         {new Date().toLocaleDateString("en-NG", {
           weekday: "short",

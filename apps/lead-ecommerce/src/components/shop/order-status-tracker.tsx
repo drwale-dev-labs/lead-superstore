@@ -60,14 +60,14 @@ export function OrderStatusTracker({
               {isComplete ? (
                 <CheckCircle2 className="h-5 w-5 flex-shrink-0 text-green-600" />
               ) : isCurrent ? (
-                <CircleDot className="h-5 w-5 flex-shrink-0 text-amber-700" />
+                <CircleDot className="h-5 w-5 flex-shrink-0 text-orange-700" />
               ) : (
                 <Circle className="h-5 w-5 flex-shrink-0 text-stone-300" />
               )}
               <span
                 className={
                   isComplete || isCurrent
-                    ? "text-sm font-medium text-stone-900"
+                    ? "text-sm font-medium text-black"
                     : "text-sm text-stone-400"
                 }
               >

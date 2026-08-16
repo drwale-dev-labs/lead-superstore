@@ -58,7 +58,7 @@ export function ContractSection({ staffId }: { staffId: string }) {
           <button
             onClick={() => generateMut.mutate()}
             disabled={generateMut.isPending}
-            className="mt-3 inline-flex items-center gap-1.5 rounded-md bg-amber-700 px-3 py-1.5 text-xs font-medium text-white hover:bg-amber-800 disabled:opacity-50"
+            className="mt-3 inline-flex items-center gap-1.5 rounded-md bg-orange-700 px-3 py-1.5 text-xs font-medium text-white hover:bg-orange-800 disabled:opacity-50"
           >
             <FileSignature className="h-3.5 w-3.5" />
             {generateMut.isPending ? "Generating…" : "Generate contract"}
@@ -150,7 +150,7 @@ function CurrentContract({
           {contract.status === "draft" && !editing && (
             <button
               onClick={() => setEditing(true)}
-              className="inline-flex items-center gap-1 text-xs text-amber-700 hover:underline"
+              className="inline-flex items-center gap-1 text-xs text-orange-700 hover:underline"
             >
               <Pencil className="h-3 w-3" />
               Edit
@@ -172,7 +172,7 @@ function CurrentContract({
             <button
               onClick={() => sendMut.mutate()}
               disabled={sendMut.isPending || editing}
-              className="inline-flex items-center gap-1.5 rounded-md bg-amber-700 px-3 py-1.5 text-xs font-medium text-white hover:bg-amber-800 disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 rounded-md bg-orange-700 px-3 py-1.5 text-xs font-medium text-white hover:bg-orange-800 disabled:opacity-50"
             >
               <Send className="h-3.5 w-3.5" />
               {sendMut.isPending ? "Sending…" : "Send to employee"}
@@ -202,7 +202,7 @@ function CurrentContract({
           ref={editorRef}
           contentEditable
           suppressContentEditableWarning
-          className="prose prose-sm max-w-none rounded-md border border-amber-300 bg-amber-50/30 p-4 text-sm focus:outline-none"
+          className="prose prose-sm max-w-none rounded-md border border-orange-300 bg-orange-50/30 p-4 text-sm focus:outline-none"
           dangerouslySetInnerHTML={{ __html: contract.content_html }}
         />
       ) : (

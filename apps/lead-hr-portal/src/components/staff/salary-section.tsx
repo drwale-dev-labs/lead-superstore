@@ -37,7 +37,7 @@ export function SalarySection({ staffId }: { staffId: string }) {
           </h2>
           <button
             onClick={() => setModalOpen(true)}
-            className="inline-flex items-center gap-1 text-xs text-amber-700 hover:underline"
+            className="inline-flex items-center gap-1 text-xs text-orange-700 hover:underline"
           >
             <Plus className="h-3 w-3" />
             {current ? "Update salary" : "Set salary"}
@@ -45,13 +45,13 @@ export function SalarySection({ staffId }: { staffId: string }) {
         </div>
 
         {current ? (
-          <div className="rounded-md border border-amber-100 bg-amber-50/40 p-4">
+          <div className="rounded-md border border-orange-100 bg-orange-50/40 p-4">
             <div className="flex items-baseline justify-between">
               <div>
                 <div className="text-[10px] uppercase tracking-wider text-stone-500">
                   Current gross (monthly)
                 </div>
-                <div className="mt-1 text-2xl font-bold text-stone-900">
+                <div className="mt-1 text-2xl font-bold text-black">
                   {formatNaira(Number(current.gross_salary))}
                 </div>
               </div>
@@ -60,7 +60,7 @@ export function SalarySection({ staffId }: { staffId: string }) {
               </div>
             </div>
             {current.notes && (
-              <p className="mt-3 border-t border-amber-100 pt-3 text-xs text-stone-600">
+              <p className="mt-3 border-t border-orange-100 pt-3 text-xs text-stone-600">
                 {current.notes}
               </p>
             )}
@@ -155,8 +155,8 @@ function SalaryModal({
       <div className="w-full max-w-md rounded-lg bg-white shadow-xl">
         <header className="flex items-center justify-between border-b border-stone-100 px-6 py-4">
           <div className="flex items-center gap-2">
-            <Wallet className="h-4 w-4 text-amber-700" />
-            <h2 className="text-base font-semibold text-stone-900">
+            <Wallet className="h-4 w-4 text-orange-700" />
+            <h2 className="text-base font-semibold text-black">
               {currentSalary !== null ? "Update salary" : "Set salary"}
             </h2>
           </div>
@@ -173,7 +173,7 @@ function SalaryModal({
           {currentSalary !== null && (
             <div className="rounded-md bg-stone-50 p-3 text-xs text-stone-600">
               Current salary:{" "}
-              <span className="font-medium text-stone-800">
+              <span className="font-medium text-black">
                 {formatNaira(Number(currentSalary))}
               </span>
               . Setting a new one closes the current structure (effective the day
@@ -228,7 +228,7 @@ function SalaryModal({
             <button
               type="submit"
               disabled={mutation.isPending}
-              className="rounded-md bg-amber-700 px-4 py-2 text-sm font-medium text-white hover:bg-amber-800 disabled:opacity-50"
+              className="rounded-md bg-orange-700 px-4 py-2 text-sm font-medium text-white hover:bg-orange-800 disabled:opacity-50"
             >
               {mutation.isPending ? "Saving…" : "Save"}
             </button>
@@ -249,7 +249,7 @@ function SalaryModal({
 // }
 
 const inputCls =
-  "w-full rounded-md border border-stone-300 bg-white px-3 py-2 text-sm focus:border-amber-700 focus:outline-none";
+  "w-full rounded-md border border-stone-300 bg-white px-3 py-2 text-sm focus:border-orange-700 focus:outline-none";
 
 function Field({
   label,

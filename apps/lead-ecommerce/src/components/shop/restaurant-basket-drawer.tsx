@@ -40,7 +40,7 @@ export function RestaurantBasketDrawer({
     <div className="fixed inset-0 z-50 flex justify-end bg-stone-900/40">
       <div className="flex h-full w-full max-w-md flex-col bg-white shadow-xl">
         <header className="flex items-center justify-between border-b border-stone-100 px-5 py-4">
-          <h2 className="flex items-center gap-2 text-base font-semibold text-stone-900">
+          <h2 className="flex items-center gap-2 text-base font-semibold text-black">
             <UtensilsCrossed className="h-4 w-4 text-orange-600" />
             Your restaurant order
           </h2>
@@ -76,7 +76,7 @@ export function RestaurantBasketDrawer({
                   >
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0 flex-1">
-                        <div className="text-sm font-medium text-stone-900">
+                        <div className="text-sm font-medium text-black">
                           {product.name}
                         </div>
                         <div className="text-xs text-stone-500">
@@ -112,7 +112,7 @@ export function RestaurantBasketDrawer({
                           <Plus className="h-3 w-3" />
                         </button>
                       </div>
-                      <span className="text-xs font-semibold text-stone-800">
+                      <span className="text-xs font-semibold text-black">
                         {formatNaira(Number(product.price) * quantity)}
                       </span>
                     </div>
@@ -122,7 +122,7 @@ export function RestaurantBasketDrawer({
                       value={note ?? ""}
                       onChange={(e) => updateNote(product.id, e.target.value)}
                       placeholder="Note (e.g. no pepper, extra sauce)"
-                      className="mt-2 w-full rounded-md border border-stone-200 bg-stone-50 px-2 py-1.5 text-xs focus:border-amber-700 focus:outline-none"
+                      className="mt-2 w-full rounded-md border border-stone-200 bg-stone-50 px-2 py-1.5 text-xs focus:border-orange-700 focus:outline-none"
                     />
                   </div>
                 ))}
@@ -132,7 +132,7 @@ export function RestaurantBasketDrawer({
             <footer className="border-t border-stone-100 px-5 py-4">
               <div className="flex items-center justify-between text-sm">
                 <span className="text-stone-600">Estimated total</span>
-                <span className="font-semibold text-stone-900">
+                <span className="font-semibold text-black">
                   {formatNaira(total)}
                 </span>
               </div>

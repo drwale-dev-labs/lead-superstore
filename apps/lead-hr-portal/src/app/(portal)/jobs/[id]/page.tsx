@@ -94,7 +94,7 @@ const [editedRequirements, setEditedRequirements] = useState<string[]>([]);
     <div className="space-y-6">
       <Link
         href="/jobs"
-        className="inline-flex items-center gap-1.5 text-xs text-stone-500 hover:text-stone-800"
+        className="inline-flex items-center gap-1.5 text-xs text-stone-500 hover:text-black"
       >
         <ArrowLeft className="h-3.5 w-3.5" />
         All jobs
@@ -108,7 +108,7 @@ const [editedRequirements, setEditedRequirements] = useState<string[]>([]);
               <Briefcase className="h-3.5 w-3.5" />
               {job.roles?.unit ?? "—"} unit
             </div>
-            <h1 className="mt-1 text-xl font-semibold text-stone-900">{job.title}</h1>
+            <h1 className="mt-1 text-xl font-semibold text-black">{job.title}</h1>
             <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-stone-600">
               <span className="inline-flex items-center gap-1">
                 <MapPin className="h-3 w-3" /> {job.outlets?.name ?? "—"}
@@ -174,7 +174,7 @@ const [editedRequirements, setEditedRequirements] = useState<string[]>([]);
           {!editing && job.status !== "closed" && (
             <button
               onClick={startEditing}
-              className="inline-flex items-center gap-1 text-xs text-amber-700 hover:underline"
+              className="inline-flex items-center gap-1 text-xs text-orange-700 hover:underline"
             >
               <Pencil className="h-3 w-3" />
               Edit
@@ -188,7 +188,7 @@ const [editedRequirements, setEditedRequirements] = useState<string[]>([]);
               value={editedDescription}
               onChange={(e) => setEditedDescription(e.target.value)}
               rows={20}
-              className="w-full rounded-md border border-stone-300 bg-white px-3 py-2 font-mono text-xs leading-relaxed focus:border-amber-700 focus:outline-none"
+              className="w-full rounded-md border border-stone-300 bg-white px-3 py-2 font-mono text-xs leading-relaxed focus:border-orange-700 focus:outline-none"
             />
             <div className="flex justify-end gap-2">
               <button
@@ -200,7 +200,7 @@ const [editedRequirements, setEditedRequirements] = useState<string[]>([]);
               <button
                 onClick={() => updateMut.mutate()}
                 disabled={updateMut.isPending}
-                className="inline-flex items-center gap-1.5 rounded-md bg-amber-700 px-3 py-1.5 text-xs font-medium text-white hover:bg-amber-800 disabled:opacity-50"
+                className="inline-flex items-center gap-1.5 rounded-md bg-orange-700 px-3 py-1.5 text-xs font-medium text-white hover:bg-orange-800 disabled:opacity-50"
               >
                 <Save className="h-3.5 w-3.5" />
                 {updateMut.isPending ? "Saving…" : "Save changes"}
@@ -223,7 +223,7 @@ const [editedRequirements, setEditedRequirements] = useState<string[]>([]);
           {!editingReqs && job.status !== "closed" && (
             <button
               onClick={startEditingReqs}
-              className="inline-flex items-center gap-1 text-xs text-amber-700 hover:underline"
+              className="inline-flex items-center gap-1 text-xs text-orange-700 hover:underline"
             >
               <Pencil className="h-3 w-3" />
               Edit
@@ -253,7 +253,7 @@ const [editedRequirements, setEditedRequirements] = useState<string[]>([]);
               <button
                 onClick={() => updateReqsMut.mutate()}
                 disabled={updateReqsMut.isPending}
-                className="inline-flex items-center gap-1.5 rounded-md bg-amber-700 px-3 py-1.5 text-xs font-medium text-white hover:bg-amber-800 disabled:opacity-50"
+                className="inline-flex items-center gap-1.5 rounded-md bg-orange-700 px-3 py-1.5 text-xs font-medium text-white hover:bg-orange-800 disabled:opacity-50"
               >
                 <Save className="h-3.5 w-3.5" />
                 {updateReqsMut.isPending ? "Saving…" : "Save changes"}
@@ -264,7 +264,7 @@ const [editedRequirements, setEditedRequirements] = useState<string[]>([]);
           <ul className="space-y-2">
             {job.requirements.map((req, idx) => (
               <li key={idx} className="flex gap-3 text-sm">
-                <span className="mt-2 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-amber-700" />
+                <span className="mt-2 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-orange-700" />
                 <span className="text-stone-700">{req}</span>
               </li>
             ))}

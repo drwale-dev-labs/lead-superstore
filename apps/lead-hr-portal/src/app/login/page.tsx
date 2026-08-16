@@ -38,10 +38,10 @@ export default function LoginPage() {
     <div className="flex min-h-screen items-center justify-center bg-stone-50 px-4">
       <div className="w-full max-w-sm">
         <div className="mb-6 text-center">
-          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-amber-100">
-            <LogIn className="h-5 w-5 text-amber-700" />
+          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-orange-100">
+            <LogIn className="h-5 w-5 text-orange-700" />
           </div>
-          <h1 className="mt-4 text-lg font-semibold text-stone-900">
+          <h1 className="mt-4 text-lg font-semibold text-black">
             Lead Superstore HR Portal
           </h1>
           <p className="mt-1 text-sm text-stone-500">Sign in to continue</p>
@@ -65,7 +65,7 @@ export default function LoginPage() {
               autoComplete="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full rounded-md border border-stone-300 bg-white px-3 py-2 text-sm focus:border-amber-700 focus:outline-none"
+              className="w-full rounded-md border border-stone-300 bg-white px-3 py-2 text-sm focus:border-orange-700 focus:outline-none"
             />
           </div>
 
@@ -83,7 +83,7 @@ export default function LoginPage() {
               autoComplete="current-password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full rounded-md border border-stone-300 bg-white px-3 py-2 text-sm focus:border-amber-700 focus:outline-none"
+              className="w-full rounded-md border border-stone-300 bg-white px-3 py-2 text-sm focus:border-orange-700 focus:outline-none"
             />
           </div>
 
@@ -96,7 +96,7 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={isSubmitting}
-            className="w-full rounded-md bg-amber-700 px-4 py-2.5 text-sm font-medium text-white hover:bg-amber-800 disabled:opacity-50"
+            className="w-full rounded-md bg-orange-700 px-4 py-2.5 text-sm font-medium text-white hover:bg-orange-800 disabled:opacity-50"
           >
             {isSubmitting ? "Signing in…" : "Sign in"}
           </button>

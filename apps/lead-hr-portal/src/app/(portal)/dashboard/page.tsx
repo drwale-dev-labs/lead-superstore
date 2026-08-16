@@ -36,6 +36,31 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6">
+      {/* Welcome banner */}
+      <section className="relative overflow-hidden rounded-xl bg-gradient-to-br from-orange-600 via-orange-600 to-orange-700 px-6 py-8 text-white shadow-sm">
+        <div className="pointer-events-none absolute inset-0 overflow-hidden">
+          <div className="absolute -right-10 -top-10 h-48 w-48 rounded-full bg-white/10 blur-2xl" />
+          <div className="absolute -bottom-16 left-1/4 h-56 w-56 rounded-full bg-white/10 blur-2xl" />
+          <div
+            className="absolute inset-0 opacity-[0.06]"
+            style={{
+              backgroundImage:
+                "radial-gradient(circle, #fff 1px, transparent 1px)",
+              backgroundSize: "22px 22px",
+            }}
+          />
+        </div>
+        <div className="relative">
+          <p className="text-xs font-medium uppercase tracking-wider text-orange-100">
+            Lead Superstore · HR &amp; Administration
+          </p>
+          <h1 className="mt-1 text-2xl font-bold sm:text-3xl">Welcome back</h1>
+          <p className="mt-1 text-sm text-orange-50">
+            Here&apos;s what&apos;s happening across Osogbo &amp; Ilesa today.
+          </p>
+        </div>
+      </section>
+
       {/* Stats row */}
       <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard label="Outlets" value={totalOutlets} sub={`${operatingOutlets} operating + warehouse`} icon={Building2} />
@@ -63,7 +88,7 @@ export default function DashboardPage() {
             <ul className="space-y-2">
               {outletsQuery.data.map((outlet) => (
                 <li key={outlet.id} className="flex items-center justify-between text-sm">
-                  <span className="font-medium text-stone-800">{outlet.name}</span>
+                  <span className="font-medium text-black">{outlet.name}</span>
                   <span className="text-xs text-stone-500">
                     {outlet.is_warehouse ? "Warehouse" : outlet.city}
                   </span>
@@ -120,7 +145,7 @@ function StatCard({
         <span className="text-xs uppercase tracking-wide text-stone-500">{label}</span>
         {Icon && <Icon className="h-4 w-4 text-stone-400" />}
       </div>
-      <div className="mt-2 text-2xl font-semibold text-stone-900">{value}</div>
+      <div className="mt-2 text-2xl font-semibold text-black">{value}</div>
       <div className="mt-1 text-xs text-stone-500">{sub}</div>
     </div>
   );

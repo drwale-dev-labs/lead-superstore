@@ -59,8 +59,8 @@ export function TransferModal({ staff, open, onClose }: Props) {
       <div className="w-full max-w-xl rounded-lg bg-white shadow-xl">
         <header className="flex items-center justify-between border-b border-stone-100 px-6 py-4">
           <div className="flex items-center gap-2">
-            <ArrowRightLeft className="h-4 w-4 text-amber-700" />
-            <h2 className="text-base font-semibold text-stone-900">
+            <ArrowRightLeft className="h-4 w-4 text-orange-700" />
+            <h2 className="text-base font-semibold text-black">
               Transfer {staff.first_name} {staff.last_name}
             </h2>
           </div>
@@ -156,7 +156,7 @@ export function TransferModal({ staff, open, onClose }: Props) {
               name="is_approved"
               defaultChecked
               onChange={(e) => setRequireApproval(!e.target.checked)}
-              className="mt-0.5 h-4 w-4 rounded border-stone-300 text-amber-700 focus:ring-amber-700"
+              className="mt-0.5 h-4 w-4 rounded border-stone-300 text-orange-700 focus:ring-orange-700"
             />
             <span>
               Mark as approved
@@ -167,7 +167,7 @@ export function TransferModal({ staff, open, onClose }: Props) {
           </label>
 
           {selectedRole && roleId !== staff.role_id && (
-            <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
+            <div className="rounded-md border border-orange-200 bg-orange-50 p-3 text-xs text-orange-800">
               <span className="font-medium">New role: </span>
               {selectedRole.name} — {selectedRole.unit} unit
             </div>
@@ -192,7 +192,7 @@ export function TransferModal({ staff, open, onClose }: Props) {
             <button
               type="submit"
               disabled={isNoOp || mutation.isPending}
-              className="rounded-md bg-amber-700 px-4 py-2 text-sm font-medium text-white hover:bg-amber-800 disabled:opacity-50"
+              className="rounded-md bg-orange-700 px-4 py-2 text-sm font-medium text-white hover:bg-orange-800 disabled:opacity-50"
             >
               {mutation.isPending ? "Transferring…" : "Confirm transfer"}
             </button>
@@ -204,7 +204,7 @@ export function TransferModal({ staff, open, onClose }: Props) {
 }
 
 const inputCls =
-  "w-full rounded-md border border-stone-300 bg-white px-3 py-2 text-sm focus:border-amber-700 focus:outline-none";
+  "w-full rounded-md border border-stone-300 bg-white px-3 py-2 text-sm focus:border-orange-700 focus:outline-none";
 
 function Field({
   label,

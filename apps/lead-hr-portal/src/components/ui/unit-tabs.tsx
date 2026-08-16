@@ -19,13 +19,13 @@ export function UnitTabs({ units, selected, onSelect, counts }: Props) {
             onClick={() => onSelect(unit)}
             className={`rounded-full border px-3.5 py-1.5 text-xs font-medium transition-colors ${
               isActive
-                ? "border-amber-700 bg-amber-700 text-white"
-                : "border-stone-200 bg-white text-stone-600 hover:border-stone-300 hover:text-stone-900"
+                ? "border-orange-700 bg-orange-700 text-white"
+                : "border-stone-200 bg-white text-stone-600 hover:border-stone-300 hover:text-black"
             }`}
           >
             {unit}
             {count !== undefined && (
-              <span className={`ml-1.5 ${isActive ? "text-amber-100" : "text-stone-400"}`}>
+              <span className={`ml-1.5 ${isActive ? "text-orange-100" : "text-stone-400"}`}>
                 {count}
               </span>
             )}

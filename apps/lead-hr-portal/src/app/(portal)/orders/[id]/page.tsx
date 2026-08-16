@@ -82,7 +82,7 @@ export default function OrderDetailPage({
     <div className="space-y-6">
       <Link
         href="/orders"
-        className="inline-flex items-center gap-1.5 text-xs text-stone-500 hover:text-stone-800"
+        className="inline-flex items-center gap-1.5 text-xs text-stone-500 hover:text-black"
       >
         <ArrowLeft className="h-3.5 w-3.5" />
         All orders
@@ -92,7 +92,7 @@ export default function OrderDetailPage({
       <header className="rounded-lg border border-stone-200 bg-white p-6">
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0">
-            <h1 className="text-xl font-semibold text-stone-900">{order.order_number}</h1>
+            <h1 className="text-xl font-semibold text-black">{order.order_number}</h1>
             <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-stone-600">
               <span>
                 {order.customers?.first_name} {order.customers?.last_name}
@@ -101,7 +101,7 @@ export default function OrderDetailPage({
               
               <a
                 href={`mailto:${order.customers?.email}`}
-                className="inline-flex items-center gap-1 hover:text-amber-700"
+                className="inline-flex items-center gap-1 hover:text-orange-700"
               >
                 <Mail className="h-3 w-3" /> {order.customers?.email}
               </a>
@@ -109,7 +109,7 @@ export default function OrderDetailPage({
               
               <a
                 href={`tel:${order.customers?.phone}`}
-                className="inline-flex items-center gap-1 hover:text-amber-700"
+                className="inline-flex items-center gap-1 hover:text-orange-700"
               >
                 <Phone className="h-3 w-3" /> {order.customers?.phone}
               </a>
@@ -130,7 +130,7 @@ export default function OrderDetailPage({
               <span className="text-stone-700">
                 {item.product_name} × {item.quantity}
               </span>
-              <span className="text-stone-900">{formatNaira(Number(item.line_total))}</span>
+              <span className="text-black">{formatNaira(Number(item.line_total))}</span>
             </li>
           ))}
         </ul>
@@ -149,7 +149,7 @@ export default function OrderDetailPage({
             <span>Service charge</span>
             <span>{formatNaira(Number(order.service_charge))}</span>
           </div>
-          <div className="flex justify-between border-t border-stone-100 pt-1 font-semibold text-stone-900">
+          <div className="flex justify-between border-t border-stone-100 pt-1 font-semibold text-black">
             <span>Total</span>
             <span>{formatNaira(Number(order.total))}</span>
           </div>
@@ -193,7 +193,7 @@ export default function OrderDetailPage({
                   step="0.01"
                   value={feeInput}
                   onChange={(e) => setFeeInput(e.target.value)}
-                  className="w-full rounded-md border border-stone-300 bg-white px-3 py-1.5 text-sm focus:border-amber-700 focus:outline-none"
+                  className="w-full rounded-md border border-stone-300 bg-white px-3 py-1.5 text-sm focus:border-orange-700 focus:outline-none"
                 />
               </div>
               <button
@@ -229,7 +229,7 @@ export default function OrderDetailPage({
             <ActionButton
               icon={CheckCircle2}
               label="Confirm order"
-              color="bg-amber-700 hover:bg-amber-800"
+              color="bg-orange-700 hover:bg-orange-800"
               onClick={() => statusMut.mutate("confirmed")}
               pending={statusMut.isPending}
             />
@@ -300,7 +300,7 @@ export default function OrderDetailPage({
           }}
           rows={4}
           placeholder="Internal notes — delivery instructions given, follow-up needed, etc."
-          className="w-full rounded-md border border-stone-300 bg-white px-3 py-2 text-sm focus:border-amber-700 focus:outline-none"
+          className="w-full rounded-md border border-stone-300 bg-white px-3 py-2 text-sm focus:border-orange-700 focus:outline-none"
         />
         {notesMut.isError && (
           <p className="mt-2 text-xs text-red-600">{(notesMut.error as Error).message}</p>
@@ -309,7 +309,7 @@ export default function OrderDetailPage({
           <button
             onClick={() => notesMut.mutate()}
             disabled={!notesDirty || notesMut.isPending}
-            className="inline-flex items-center gap-1.5 rounded-md bg-amber-700 px-3 py-1.5 text-xs font-medium text-white hover:bg-amber-800 disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 rounded-md bg-orange-700 px-3 py-1.5 text-xs font-medium text-white hover:bg-orange-800 disabled:opacity-50"
           >
             <Save className="h-3.5 w-3.5" />
             {notesMut.isPending ? "Saving…" : "Save notes"}

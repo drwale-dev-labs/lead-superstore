@@ -17,7 +17,7 @@ export function OrderSummary({ order, items }: OrderDetail) {
               <span className="text-stone-700">
                 {item.product_name} × {item.quantity}
               </span>
-              <span className="text-stone-900">{formatNaira(Number(item.line_total))}</span>
+              <span className="text-black">{formatNaira(Number(item.line_total))}</span>
             </li>
           ))}
         </ul>
@@ -36,7 +36,7 @@ export function OrderSummary({ order, items }: OrderDetail) {
             <span>Service charge</span>
             <span>{formatNaira(Number(order.service_charge))}</span>
           </div>
-          <div className="flex justify-between border-t border-stone-100 pt-1 font-semibold text-stone-900">
+          <div className="flex justify-between border-t border-stone-100 pt-1 font-semibold text-black">
             <span>Total</span>
             <span>{formatNaira(Number(order.total))}</span>
           </div>

@@ -56,7 +56,7 @@ export default function PayrollPage() {
         {effectiveOutletId && (
           <Link
             href={`/payroll/new?outlet_id=${effectiveOutletId}`}
-            className="inline-flex items-center gap-2 rounded-md bg-amber-700 px-4 py-2 text-sm font-medium text-white hover:bg-amber-800"
+            className="inline-flex items-center gap-2 rounded-md bg-orange-700 px-4 py-2 text-sm font-medium text-white hover:bg-orange-800"
           >
             <Plus className="h-4 w-4" />
             New period
@@ -75,7 +75,7 @@ export default function PayrollPage() {
               value={effectiveOutletId}
               onChange={(e) => setOutletId(e.target.value)}
               disabled={outletsQuery.isLoading}
-              className="w-full rounded-md border border-stone-300 bg-white px-3 py-2 text-sm focus:border-amber-700 focus:outline-none"
+              className="w-full rounded-md border border-stone-300 bg-white px-3 py-2 text-sm focus:border-orange-700 focus:outline-none"
             >
               {outletsQuery.isLoading && <option>Loading…</option>}
               {outletsQuery.data?.map((o) => (
@@ -96,7 +96,7 @@ export default function PayrollPage() {
               onChange={(e) =>
                 setStatusFilter(e.target.value as PayrollStatus | "all")
               }
-              className="w-full rounded-md border border-stone-300 bg-white px-3 py-2 text-sm focus:border-amber-700 focus:outline-none"
+              className="w-full rounded-md border border-stone-300 bg-white px-3 py-2 text-sm focus:border-orange-700 focus:outline-none"
             >
               {STATUS_OPTIONS.map((opt) => (
                 <option key={opt.value} value={opt.value}>
@@ -138,7 +138,7 @@ export default function PayrollPage() {
             <Link
               key={p.id}
               href={`/payroll/${p.id}`}
-              className="block rounded-lg border border-stone-200 bg-white p-5 transition-colors hover:border-amber-300"
+              className="block rounded-lg border border-stone-200 bg-white p-5 transition-colors hover:border-orange-300"
             >
               <div className="flex items-start justify-between gap-4">
                 <div className="min-w-0 flex-1">
@@ -146,7 +146,7 @@ export default function PayrollPage() {
                     <Calendar className="h-3.5 w-3.5" />
                     {formatPeriodLabel(p.period_start, p.period_end)}
                   </div>
-                  <h3 className="mt-1 text-sm font-semibold text-stone-900">
+                  <h3 className="mt-1 text-sm font-semibold text-black">
                     {p.outlets?.name ?? "—"}
                   </h3>
                   <div className="mt-2 flex items-center gap-3 text-xs text-stone-500">

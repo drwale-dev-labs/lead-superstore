@@ -177,7 +177,7 @@ export function PhotoCapture({ onChange }: Props) {
               <button
                 type="button"
                 onClick={capture}
-                className="inline-flex items-center gap-1.5 rounded-md bg-amber-700 px-3 py-2 text-sm font-medium text-white hover:bg-amber-800"
+                className="inline-flex items-center gap-1.5 rounded-md bg-orange-700 px-3 py-2 text-sm font-medium text-white hover:bg-orange-800"
               >
                 <Camera className="h-4 w-4" />
                 Capture

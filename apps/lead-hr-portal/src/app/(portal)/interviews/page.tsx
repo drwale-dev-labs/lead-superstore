@@ -72,7 +72,7 @@ export default function InterviewQuestionsPage() {
           <button
             onClick={() => mutation.mutate()}
             disabled={!canGenerate}
-            className="inline-flex items-center gap-2 rounded-md bg-amber-700 px-5 py-2 text-sm font-medium text-white hover:bg-amber-800 disabled:opacity-50"
+            className="inline-flex items-center gap-2 rounded-md bg-orange-700 px-5 py-2 text-sm font-medium text-white hover:bg-orange-800 disabled:opacity-50"
           >
             {mutation.isPending ? (
               <>
@@ -96,7 +96,7 @@ export default function InterviewQuestionsPage() {
         <div className="rounded-lg border border-stone-200 bg-white p-6">
           <div className="mb-4 flex items-center justify-between border-b border-stone-100 pb-3">
             <div>
-              <h2 className="text-sm font-semibold text-stone-800">
+              <h2 className="text-sm font-semibold text-black">
                 {mutation.data?.role_name} — Interview Questions
               </h2>
               <p className="text-xs text-stone-500">
@@ -139,4 +139,4 @@ export default function InterviewQuestionsPage() {
 }
 
 const inputCls =
-  "w-full rounded-md border border-stone-300 bg-white px-3 py-2 text-sm focus:border-amber-700 focus:outline-none";
+  "w-full rounded-md border border-stone-300 bg-white px-3 py-2 text-sm focus:border-orange-700 focus:outline-none";

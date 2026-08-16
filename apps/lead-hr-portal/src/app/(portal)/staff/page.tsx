@@ -54,7 +54,7 @@ export default function EmployeesPage() {
         </p>
         <Link
           href="/onboarding"
-          className="inline-flex items-center gap-2 rounded-md bg-amber-700 px-4 py-2 text-sm font-medium text-white hover:bg-amber-800"
+          className="inline-flex items-center gap-2 rounded-md bg-orange-700 px-4 py-2 text-sm font-medium text-white hover:bg-orange-800"
         >
           <UserPlus className="h-4 w-4" />
           Onboard new hire
@@ -72,7 +72,7 @@ export default function EmployeesPage() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Name…"
-              className="w-full rounded-md border border-stone-300 bg-white py-2 pl-9 pr-3 text-sm focus:border-amber-700 focus:outline-none"
+              className="w-full rounded-md border border-stone-300 bg-white py-2 pl-9 pr-3 text-sm focus:border-orange-700 focus:outline-none"
             />
           </div>
         </div>
@@ -82,7 +82,7 @@ export default function EmployeesPage() {
           <select
             value={outletId}
             onChange={(e) => setOutletId(e.target.value)}
-            className="w-full rounded-md border border-stone-300 bg-white px-3 py-2 text-sm focus:border-amber-700 focus:outline-none"
+            className="w-full rounded-md border border-stone-300 bg-white px-3 py-2 text-sm focus:border-orange-700 focus:outline-none"
           >
             <option value="all">All outlets</option>
             {outletsQuery.data?.map((o) => (
@@ -98,7 +98,7 @@ export default function EmployeesPage() {
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value as StaffStatus | "all")}
-            className="w-full rounded-md border border-stone-300 bg-white px-3 py-2 text-sm focus:border-amber-700 focus:outline-none"
+            className="w-full rounded-md border border-stone-300 bg-white px-3 py-2 text-sm focus:border-orange-700 focus:outline-none"
           >
             {STATUS_OPTIONS.map((opt) => (
               <option key={opt.value} value={opt.value}>
@@ -112,7 +112,7 @@ export default function EmployeesPage() {
           <div className="ml-auto text-xs text-stone-500">
             <span className="font-medium text-stone-700">{counts.total}</span> shown ·{" "}
             <span className="font-medium text-green-700">{counts.active}</span> active ·{" "}
-            <span className="font-medium text-amber-700">{counts.onboarding}</span> onboarding
+            <span className="font-medium text-orange-700">{counts.onboarding}</span> onboarding
           </div>
         )}
       </div>
@@ -155,7 +155,7 @@ export default function EmployeesPage() {
                     <div>
                       <Link
                         href={`/staff/${s.id}`}
-                        className="font-medium text-stone-900 hover:text-amber-700"
+                        className="font-medium text-black hover:text-orange-700"
                       >
                         {s.first_name} {s.last_name}
                       </Link>

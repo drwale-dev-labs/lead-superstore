@@ -23,7 +23,7 @@ export function PaymentButton({ orderId }: { orderId: string }) {
       <button
         onClick={() => mutation.mutate()}
         disabled={mutation.isPending}
-        className="inline-flex w-full items-center justify-center gap-2 rounded-md bg-amber-700 px-5 py-2.5 text-sm font-medium text-white hover:bg-amber-800 disabled:opacity-50"
+        className="inline-flex w-full items-center justify-center gap-2 rounded-md bg-orange-700 px-5 py-2.5 text-sm font-medium text-white hover:bg-orange-800 disabled:opacity-50"
       >
         {mutation.isPending ? (
           <>

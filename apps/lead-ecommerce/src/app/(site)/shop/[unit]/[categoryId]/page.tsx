@@ -47,14 +47,14 @@ export default function CategoryPage({
     <div className="mx-auto max-w-6xl px-6 py-10">
       <Link
         href={`/shop/${unitSlug}`}
-        className="inline-flex items-center gap-1.5 text-xs text-stone-500 hover:text-stone-800"
+        className="inline-flex items-center gap-1.5 text-xs text-stone-500 hover:text-black"
       >
         <ArrowLeft className="h-3.5 w-3.5" />
         All {unit.toLowerCase()}
       </Link>
 
       <header className="mt-4">
-        <h1 className="text-2xl font-bold text-stone-900">
+        <h1 className="text-2xl font-bold text-black">
           {category?.name ?? "Category"}
         </h1>
         {category?.description && (

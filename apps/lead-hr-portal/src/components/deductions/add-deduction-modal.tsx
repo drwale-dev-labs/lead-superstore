@@ -106,8 +106,8 @@ export function AddDeductionModal({ type, open, onClose }: Props) {
       <div className="w-full max-w-lg rounded-lg bg-white shadow-xl">
         <header className="flex items-center justify-between border-b border-stone-100 px-6 py-4">
           <div className="flex items-center gap-2">
-            <Icon className="h-4 w-4 text-amber-700" />
-            <h2 className="text-base font-semibold text-stone-900">{meta.title}</h2>
+            <Icon className="h-4 w-4 text-orange-700" />
+            <h2 className="text-base font-semibold text-black">{meta.title}</h2>
           </div>
           <button
             onClick={onClose}
@@ -215,7 +215,7 @@ export function AddDeductionModal({ type, open, onClose }: Props) {
             <button
               type="submit"
               disabled={activeMut.isPending}
-              className="rounded-md bg-amber-700 px-4 py-2 text-sm font-medium text-white hover:bg-amber-800 disabled:opacity-50"
+              className="rounded-md bg-orange-700 px-4 py-2 text-sm font-medium text-white hover:bg-orange-800 disabled:opacity-50"
             >
               {activeMut.isPending ? "Saving…" : "Create"}
             </button>
@@ -227,7 +227,7 @@ export function AddDeductionModal({ type, open, onClose }: Props) {
 }
 
 const inputCls =
-  "w-full rounded-md border border-stone-300 bg-white px-3 py-2 text-sm focus:border-amber-700 focus:outline-none";
+  "w-full rounded-md border border-stone-300 bg-white px-3 py-2 text-sm focus:border-orange-700 focus:outline-none";
 
 function Field({
   label,

@@ -79,10 +79,10 @@ export default function OnboardingPage() {
               setPath("new_hire");
               setStage("register");
             }}
-            className="rounded-lg border border-stone-200 bg-white p-6 text-left transition-colors hover:border-amber-300"
+            className="rounded-lg border border-stone-200 bg-white p-6 text-left transition-colors hover:border-orange-300"
           >
-            <UserPlus className="h-6 w-6 text-amber-700" />
-            <h3 className="mt-3 text-sm font-semibold text-stone-900">New hire</h3>
+            <UserPlus className="h-6 w-6 text-orange-700" />
+            <h3 className="mt-3 text-sm font-semibold text-black">New hire</h3>
             <p className="mt-1 text-xs text-stone-500">
               Full verification — photo, reference, and guarantor required before
               activation. Use this for genuinely new external hires.
@@ -93,10 +93,10 @@ export default function OnboardingPage() {
               setPath("existing_staff");
               setStage("register");
             }}
-            className="rounded-lg border border-stone-200 bg-white p-6 text-left transition-colors hover:border-amber-300"
+            className="rounded-lg border border-stone-200 bg-white p-6 text-left transition-colors hover:border-orange-300"
           >
-            <UserCheck className="h-6 w-6 text-amber-700" />
-            <h3 className="mt-3 text-sm font-semibold text-stone-900">Existing staff</h3>
+            <UserCheck className="h-6 w-6 text-orange-700" />
+            <h3 className="mt-3 text-sm font-semibold text-black">Existing staff</h3>
             <p className="mt-1 text-xs text-stone-500">
               Already working at Lead Superstore and known/trusted — skips
               reference/guarantor collection, but still captures banking details and
@@ -134,7 +134,7 @@ export default function OnboardingPage() {
                   done
                     ? "bg-green-100 text-green-700"
                     : active
-                      ? "bg-amber-700 text-white"
+                      ? "bg-orange-700 text-white"
                       : "bg-stone-100 text-stone-500"
                 }`}
               >
@@ -326,7 +326,7 @@ function RegisterStage({ onSuccess }: { onSuccess: (s: Staff) => void }) {
         <button
           type="submit"
           disabled={mutation.isPending}
-          className="rounded-md bg-amber-700 px-5 py-2 text-sm font-medium text-white hover:bg-amber-800 disabled:opacity-50"
+          className="rounded-md bg-orange-700 px-5 py-2 text-sm font-medium text-white hover:bg-orange-800 disabled:opacity-50"
         >
           {mutation.isPending ? "Registering…" : "Register & continue"}
         </button>
@@ -365,7 +365,7 @@ function PhotoStage({ staffId, onDone }: { staffId: string; onDone: () => void }
         <button
           onClick={() => mutation.mutate()}
           disabled={!file || mutation.isPending}
-          className="rounded-md bg-amber-700 px-5 py-2 text-sm font-medium text-white hover:bg-amber-800 disabled:opacity-50"
+          className="rounded-md bg-orange-700 px-5 py-2 text-sm font-medium text-white hover:bg-orange-800 disabled:opacity-50"
         >
           {mutation.isPending ? "Uploading…" : "Upload & continue"}
         </button>
@@ -444,7 +444,7 @@ function ReferenceStage({ staffId, onDone }: { staffId: string; onDone: () => vo
           name="document"
           type="file"
           accept="image/jpeg,image/png,application/pdf"
-          className="block w-full text-sm text-stone-600 file:mr-3 file:rounded-md file:border-0 file:bg-amber-50 file:px-3 file:py-2 file:text-sm file:font-medium file:text-amber-700 hover:file:bg-amber-100"
+          className="block w-full text-sm text-stone-600 file:mr-3 file:rounded-md file:border-0 file:bg-orange-50 file:px-3 file:py-2 file:text-sm file:font-medium file:text-orange-700 hover:file:bg-orange-100"
         />
       </Field>
 
@@ -454,7 +454,7 @@ function ReferenceStage({ staffId, onDone }: { staffId: string; onDone: () => vo
         <button
           type="submit"
           disabled={mutation.isPending}
-          className="rounded-md bg-amber-700 px-5 py-2 text-sm font-medium text-white hover:bg-amber-800 disabled:opacity-50"
+          className="rounded-md bg-orange-700 px-5 py-2 text-sm font-medium text-white hover:bg-orange-800 disabled:opacity-50"
         >
           {mutation.isPending ? "Saving…" : "Save & continue"}
         </button>
@@ -544,7 +544,7 @@ function GuarantorStage({ staffId, onDone }: { staffId: string; onDone: () => vo
           name="document"
           type="file"
           accept="image/jpeg,image/png,application/pdf"
-          className="block w-full text-sm text-stone-600 file:mr-3 file:rounded-md file:border-0 file:bg-amber-50 file:px-3 file:py-2 file:text-sm file:font-medium file:text-amber-700 hover:file:bg-amber-100"
+          className="block w-full text-sm text-stone-600 file:mr-3 file:rounded-md file:border-0 file:bg-orange-50 file:px-3 file:py-2 file:text-sm file:font-medium file:text-orange-700 hover:file:bg-orange-100"
         />
       </Field>
 
@@ -554,7 +554,7 @@ function GuarantorStage({ staffId, onDone }: { staffId: string; onDone: () => vo
         <button
           type="submit"
           disabled={mutation.isPending}
-          className="rounded-md bg-amber-700 px-5 py-2 text-sm font-medium text-white hover:bg-amber-800 disabled:opacity-50"
+          className="rounded-md bg-orange-700 px-5 py-2 text-sm font-medium text-white hover:bg-orange-800 disabled:opacity-50"
         >
           {mutation.isPending ? "Saving…" : "Save & continue"}
         </button>
@@ -621,7 +621,7 @@ function SalaryStage({ staffId, onDone }: { staffId: string; onDone: () => void 
         <button
           type="submit"
           disabled={mutation.isPending}
-          className="rounded-md bg-amber-700 px-5 py-2 text-sm font-medium text-white hover:bg-amber-800 disabled:opacity-50"
+          className="rounded-md bg-orange-700 px-5 py-2 text-sm font-medium text-white hover:bg-orange-800 disabled:opacity-50"
         >
           {mutation.isPending ? "Saving…" : "Save & continue"}
         </button>
@@ -702,7 +702,7 @@ function ReviewStage({
 // ============================================================================
 
 const inputCls =
-  "w-full rounded-md border border-stone-300 bg-white px-3 py-2 text-sm focus:border-amber-700 focus:outline-none";
+  "w-full rounded-md border border-stone-300 bg-white px-3 py-2 text-sm focus:border-orange-700 focus:outline-none";
 
 function Field({
   label,
@@ -726,7 +726,7 @@ function Field({
 
 function SectionTitle({ children }: { children: React.ReactNode }) {
   return (
-    <h3 className="text-sm font-semibold text-stone-800 border-b border-stone-100 pb-2">
+    <h3 className="text-sm font-semibold text-black border-b border-stone-100 pb-2">
       {children}
     </h3>
   );

@@ -23,8 +23,8 @@ export function SiteHeader() {
       <header className="border-b border-stone-200 bg-white">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
           <Link href="/" className="flex flex-col">
-            <span className="text-base font-semibold text-amber-700">
-              Lead Superstore
+            <span className="text-base font-semibold text-black">
+              Lead <span className="text-orange-600">Superstore</span>
             </span>
             <span className="text-[10px] uppercase tracking-wider text-stone-400">
               Osun&apos;s favourite store
@@ -34,23 +34,23 @@ export function SiteHeader() {
           <div className="flex items-center gap-5 text-sm">
             <button
               onClick={() => setSelectorOpen(true)}
-              className="inline-flex items-center gap-1.5 rounded-full border border-stone-200 px-3 py-1.5 text-xs text-stone-700 hover:border-amber-300 hover:text-amber-700"
+              className="inline-flex items-center gap-1.5 rounded-full border border-stone-200 px-3 py-1.5 text-xs text-stone-700 hover:border-orange-300 hover:text-orange-700"
             >
               <MapPin className="h-3.5 w-3.5" />
               {outlet ? outlet.name : "Choose outlet"}
             </button>
 
-            <Link href="/" className="text-stone-600 hover:text-amber-700">
+            <Link href="/" className="text-stone-600 hover:text-orange-700">
               Shop
             </Link>
 
-            <Link href="/careers" className="text-stone-600 hover:text-amber-700">
+            <Link href="/careers" className="text-stone-600 hover:text-orange-700">
               Careers
             </Link>
 
             <Link
               href="/track"
-              className="inline-flex items-center gap-1 text-stone-600 hover:text-amber-700"
+              className="inline-flex items-center gap-1 text-stone-600 hover:text-orange-700"
             >
               <PackageSearch className="h-4 w-4" />
               Track order
@@ -58,7 +58,7 @@ export function SiteHeader() {
 
             <Link
               href={session ? "/account/orders" : "/account/login"}
-              className="inline-flex items-center gap-1 text-stone-600 hover:text-amber-700"
+              className="inline-flex items-center gap-1 text-stone-600 hover:text-orange-700"
             >
               <User className="h-4 w-4" />
               {session ? "My orders" : "Sign in"}
@@ -79,12 +79,12 @@ export function SiteHeader() {
 
             <Link
               href="/cart"
-              className="relative inline-flex items-center gap-1 text-stone-600 hover:text-amber-700"
+              className="relative inline-flex items-center gap-1 text-stone-600 hover:text-orange-700"
             >
               <ShoppingBag className="h-4 w-4" />
               Cart
               {itemCount > 0 && (
-                <span className="absolute -right-3 -top-2 flex h-4 min-w-4 items-center justify-center rounded-full bg-amber-700 px-1 text-[9px] font-bold text-white">
+                <span className="absolute -right-3 -top-2 flex h-4 min-w-4 items-center justify-center rounded-full bg-orange-700 px-1 text-[9px] font-bold text-white">
                   {itemCount}
                 </span>
               )}

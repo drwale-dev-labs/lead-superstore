@@ -54,7 +54,7 @@ export default function JobAdsPage() {
         outlet — the ad is tailored to the role&apos;s actual responsibilities and
         Lead Superstore&apos;s tone. Use this for quick drafts or for posts on social
         media; to publish to the careers page,{" "}
-        <Link href="/jobs/new" className="text-amber-700 hover:underline">
+        <Link href="/jobs/new" className="text-orange-700 hover:underline">
           create a job posting
         </Link>{" "}
         instead.
@@ -124,7 +124,7 @@ export default function JobAdsPage() {
           <button
             onClick={() => mutation.mutate()}
             disabled={!canGenerate}
-            className="inline-flex items-center gap-2 rounded-md bg-amber-700 px-5 py-2 text-sm font-medium text-white hover:bg-amber-800 disabled:opacity-50"
+            className="inline-flex items-center gap-2 rounded-md bg-orange-700 px-5 py-2 text-sm font-medium text-white hover:bg-orange-800 disabled:opacity-50"
           >
             {mutation.isPending ? (
               <>
@@ -148,7 +148,7 @@ export default function JobAdsPage() {
         <div className="rounded-lg border border-stone-200 bg-white p-6">
           <div className="mb-4 flex items-center justify-between border-b border-stone-100 pb-3">
             <div>
-              <h2 className="text-sm font-semibold text-stone-800">
+              <h2 className="text-sm font-semibold text-black">
                 {mutation.data?.role_name} — {mutation.data?.outlet_name}
               </h2>
               <p className="text-xs text-stone-500">
@@ -181,7 +181,7 @@ export default function JobAdsPage() {
               </button>
               <Link
                 href={`/jobs/new`}
-                className="inline-flex items-center gap-1.5 rounded-md bg-amber-700 px-3 py-1.5 text-xs font-medium text-white hover:bg-amber-800"
+                className="inline-flex items-center gap-1.5 rounded-md bg-orange-700 px-3 py-1.5 text-xs font-medium text-white hover:bg-orange-800"
               >
                 Create posting
                 <ArrowRight className="h-3.5 w-3.5" />
@@ -198,4 +198,4 @@ export default function JobAdsPage() {
 }
 
 const inputCls =
-  "w-full rounded-md border border-stone-300 bg-white px-3 py-2 text-sm focus:border-amber-700 focus:outline-none";
+  "w-full rounded-md border border-stone-300 bg-white px-3 py-2 text-sm focus:border-orange-700 focus:outline-none";

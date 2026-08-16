@@ -87,7 +87,7 @@ export default function NewJobPage() {
       </p>
 
       <div className="rounded-lg border border-stone-200 bg-white p-6 space-y-4">
-        <h2 className="text-sm font-semibold text-stone-800 border-b border-stone-100 pb-2">
+        <h2 className="text-sm font-semibold text-black border-b border-stone-100 pb-2">
           Basic details
         </h2>
 
@@ -168,12 +168,12 @@ export default function NewJobPage() {
       {/* Description with AI generation */}
       <div className="rounded-lg border border-stone-200 bg-white p-6 space-y-4">
         <div className="flex items-center justify-between border-b border-stone-100 pb-2">
-          <h2 className="text-sm font-semibold text-stone-800">Job description</h2>
+          <h2 className="text-sm font-semibold text-black">Job description</h2>
           <button
             type="button"
             onClick={() => generateMut.mutate()}
             disabled={!canGenerate}
-            className="inline-flex items-center gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs font-medium text-amber-800 hover:bg-amber-100 disabled:opacity-50"
+            className="inline-flex items-center gap-2 rounded-md border border-orange-200 bg-orange-50 px-3 py-1.5 text-xs font-medium text-orange-800 hover:bg-orange-100 disabled:opacity-50"
             title={!roleId || !outletId ? "Pick role and outlet first" : "Generate with Claude"}
           >
             {generateMut.isPending ? (
@@ -208,7 +208,7 @@ export default function NewJobPage() {
       {/* Requirements */}
     <div className="rounded-lg border border-stone-200 bg-white p-6 space-y-4">
       <div className="border-b border-stone-100 pb-2">
-        <h2 className="text-sm font-semibold text-stone-800">Requirements</h2>
+        <h2 className="text-sm font-semibold text-black">Requirements</h2>
         <p className="mt-1 text-xs text-stone-500">
           Pre-filled from the role definition when you pick a role. Edit, reorder, or
           add new ones for this specific posting.
@@ -232,7 +232,7 @@ export default function NewJobPage() {
         <button
           onClick={() => createMut.mutate()}
           disabled={!canSave}
-          className="rounded-md bg-amber-700 px-5 py-2 text-sm font-medium text-white hover:bg-amber-800 disabled:opacity-50"
+          className="rounded-md bg-orange-700 px-5 py-2 text-sm font-medium text-white hover:bg-orange-800 disabled:opacity-50"
         >
           {createMut.isPending ? "Saving draft…" : "Save as draft"}
         </button>
@@ -242,7 +242,7 @@ export default function NewJobPage() {
 }
 
 const inputCls =
-  "w-full rounded-md border border-stone-300 bg-white px-3 py-2 text-sm focus:border-amber-700 focus:outline-none";
+  "w-full rounded-md border border-stone-300 bg-white px-3 py-2 text-sm focus:border-orange-700 focus:outline-none";
 
 function Field({
   label,

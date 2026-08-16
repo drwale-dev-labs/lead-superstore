@@ -53,7 +53,7 @@ export default function ReportsPage() {
                 {funnel.data.by_job.slice(0, 6).map((j: any) => (
                   <div key={j.title} className="flex justify-between text-xs">
                     <span className="text-stone-600">{j.title}</span>
-                    <span className="text-stone-800">
+                    <span className="text-black">
                       {j.hired}/{j.total} hired ({j.conversion_rate}%)
                     </span>
                   </div>
@@ -74,7 +74,7 @@ export default function ReportsPage() {
                   <span className="text-stone-600">
                     {o.outlet} ({o.periods} periods)
                   </span>
-                  <span className="font-medium text-stone-800">
+                  <span className="font-medium text-black">
                     {formatNaira(o.total_net)}
                   </span>
                 </div>
@@ -121,7 +121,7 @@ export default function ReportsPage() {
                     <span className="text-stone-600">
                       {o.outlet} ({o.orders} orders)
                     </span>
-                    <span className="font-medium text-stone-800">
+                    <span className="font-medium text-black">
                       {formatNaira(o.revenue)}
                     </span>
                   </div>
@@ -138,8 +138,8 @@ export default function ReportsPage() {
 function Card({ title, icon: Icon, children }: { title: string; icon: any; children: React.ReactNode }) {
   return (
     <div className="rounded-lg border border-stone-200 bg-white p-6">
-      <h2 className="mb-4 flex items-center gap-2 text-sm font-semibold text-stone-800 border-b border-stone-100 pb-2">
-        <Icon className="h-4 w-4 text-amber-700" />
+      <h2 className="mb-4 flex items-center gap-2 text-sm font-semibold text-black border-b border-stone-100 pb-2">
+        <Icon className="h-4 w-4 text-orange-700" />
         {title}
       </h2>
       {children}
@@ -150,7 +150,7 @@ function Card({ title, icon: Icon, children }: { title: string; icon: any; child
 function BigStat({ value, label }: { value: string | number; label: string }) {
   return (
     <div className="mb-4">
-      <div className="text-2xl font-bold text-stone-900">{value}</div>
+      <div className="text-2xl font-bold text-black">{value}</div>
       <div className="text-xs text-stone-500">{label}</div>
     </div>
   );
@@ -170,7 +170,7 @@ function MiniTable({ rows }: { rows: [string, string | number][] }) {
       {rows.map(([label, value]) => (
         <div key={label} className="flex justify-between text-xs">
           <span className="capitalize text-stone-600">{label.replace(/_/g, " ")}</span>
-          <span className="font-medium text-stone-800">{value}</span>
+          <span className="font-medium text-black">{value}</span>
         </div>
       ))}
     </div>

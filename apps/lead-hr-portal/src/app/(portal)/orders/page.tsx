@@ -67,12 +67,12 @@ export default function OrdersPage() {
                 onClick={() => setStatusFilter(tab.value)}
                 className={`rounded-full border px-3.5 py-1.5 text-xs font-medium transition-colors ${
                   isActive
-                    ? "border-amber-700 bg-amber-700 text-white"
+                    ? "border-orange-700 bg-orange-700 text-white"
                     : "border-stone-200 bg-white text-stone-600 hover:border-stone-300"
                 }`}
               >
                 {tab.label}
-                <span className={`ml-1.5 ${isActive ? "text-amber-100" : "text-stone-400"}`}>
+                <span className={`ml-1.5 ${isActive ? "text-orange-100" : "text-stone-400"}`}>
                   {count}
                 </span>
               </button>
@@ -83,7 +83,7 @@ export default function OrdersPage() {
         <select
           value={outletId}
           onChange={(e) => setOutletId(e.target.value)}
-          className="rounded-md border border-stone-300 bg-white px-3 py-1.5 text-xs focus:border-amber-700 focus:outline-none"
+          className="rounded-md border border-stone-300 bg-white px-3 py-1.5 text-xs focus:border-orange-700 focus:outline-none"
         >
           <option value="all">All outlets</option>
           {outletsQuery.data
@@ -125,7 +125,7 @@ export default function OrdersPage() {
                   <td className="px-4 py-3">
                     <Link
                       href={`/orders/${o.id}`}
-                      className="font-medium text-stone-900 hover:text-amber-700"
+                      className="font-medium text-black hover:text-orange-700"
                     >
                       {o.order_number}
                     </Link>
@@ -154,7 +154,7 @@ export default function OrdersPage() {
                       {o.fulfillment_method === "delivery" ? "Delivery" : "Pickup"}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-right font-medium text-stone-900">
+                  <td className="px-4 py-3 text-right font-medium text-black">
                     {formatNaira(Number(o.total))}
                   </td>
                   <td className="px-4 py-3">
