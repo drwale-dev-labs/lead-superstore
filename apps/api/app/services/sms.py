@@ -1,45 +1,49 @@
-"""Termii integration for customer-facing SMS notifications."""
+"""Africa's Talking integration for customer-facing SMS notifications."""
 
 import httpx
 
 from app.core.config import settings
 
-TERMII_BASE_URL = "https://api.ng.termii.com/api/sms/send"
+AFRICASTALKING_BASE_URL = "https://api.africastalking.com/version1/messaging"
 
 
-def _to_termii_format(phone: str) -> str:
-    """Normalize a Nigerian phone number to international format (no leading +).
+def _to_at_format(phone: str) -> str:
+    """Normalize a Nigerian phone number to E.164 format (+234...).
 
     Accepts local format (0801...) or already-international (234801... / +234801...).
     """
     digits = "".join(c for c in phone if c.isdigit())
     if digits.startswith("0"):
-        return "234" + digits[1:]
+        return "+234" + digits[1:]
     if digits.startswith("234"):
-        return digits
-    return digits
+        return "+" + digits
+    return "+" + digits
 
 
 def _send_sms(to_phone: str, message: str) -> None:
-    if not settings.TERMII_API_KEY:
-        raise RuntimeError("TERMII_API_KEY is not configured")
+    if not settings.AFRICASTALKING_API_KEY:
+        raise RuntimeError("AFRICASTALKING_API_KEY is not configured")
 
     response = httpx.post(
-        TERMII_BASE_URL,
-        json={
-            "api_key": settings.TERMII_API_KEY,
-            "to": _to_termii_format(to_phone),
-            "from": settings.TERMII_SENDER_ID,
-            "sms": message,
-            "type": "plain",
-            "channel": "dnd",
+        AFRICASTALKING_BASE_URL,
+        headers={
+            "apiKey": settings.AFRICASTALKING_API_KEY,
+            "Accept": "application/json",
+            "Content-Type": "application/x-www-form-urlencoded",
+        },
+        data={
+            "username": settings.AFRICASTALKING_USERNAME,
+            "to": _to_at_format(to_phone),
+            "message": message,
+            "from": settings.AFRICASTALKING_SENDER_ID,
         },
         timeout=15.0,
     )
     response.raise_for_status()
     body = response.json()
-    if body.get("code") != "ok":
-        raise RuntimeError(f"Termii rejected the message: {body}")
+    recipients = body.get("SMSMessageData", {}).get("Recipients", [])
+    if not recipients or recipients[0].get("status") != "Success":
+        raise RuntimeError(f"Africa's Talking rejected the message: {body}")
 
 
 def send_order_confirmation_sms(
