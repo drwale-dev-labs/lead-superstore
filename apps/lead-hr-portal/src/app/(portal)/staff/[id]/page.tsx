@@ -257,6 +257,7 @@ export default function StaffDetailPage({
             <Detail label="Bank" value={s.bank_name ?? "—"} />
             <Detail label="Account number" value={s.bank_account_number ?? "—"} />
             <Detail label="Account name" value={s.bank_account_name ?? "—"} />
+            <Detail label="Sort code" value={s.bank_sort_code ?? "—"} />
           </dl>
         ) : (
           <p className="text-xs text-stone-500">No bank details on file.</p>
@@ -458,6 +459,7 @@ function EditStaffModal({
       bank_name: (form.get("bank_name") as string) || null,
       bank_account_number: (form.get("bank_account_number") as string) || null,
       bank_account_name: (form.get("bank_account_name") as string) || null,
+      bank_sort_code: (form.get("bank_sort_code") as string) || null,
       notes: (form.get("notes") as string) || null,
     });
   }
@@ -565,6 +567,14 @@ function EditStaffModal({
               <input
                 name="bank_account_name"
                 defaultValue={staff.bank_account_name ?? ""}
+                className={modalInputCls}
+              />
+            </ModalField>
+            <ModalField label="Sort code">
+              <input
+                name="bank_sort_code"
+                maxLength={20}
+                defaultValue={staff.bank_sort_code ?? ""}
                 className={modalInputCls}
               />
             </ModalField>
