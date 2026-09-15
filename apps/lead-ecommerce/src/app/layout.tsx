@@ -9,10 +9,31 @@ import { CustomerAuthProvider } from "@/lib/customer-auth-context";
 
 const inter = Inter({ subsets: ["latin"] });
 
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3001";
+const title = "Lead Superstore";
+const description =
+  "Your Osun State's favourite destination for shopping, fresh bakery treats, delicious meals, and rewarding careers. We've got it all.";
+
 export const metadata: Metadata = {
-  title: "Lead Superstore",
-  description:
-    "Your Osun State's favourite destination for shopping, fresh bakery treats, delicious meals, and rewarding careers. We've got it all.",
+  metadataBase: new URL(siteUrl),
+  title: {
+    default: title,
+    template: `%s — ${title}`,
+  },
+  description,
+  openGraph: {
+    title,
+    description,
+    url: siteUrl,
+    siteName: title,
+    locale: "en_NG",
+    type: "website",
+  },
+  twitter: {
+    card: "summary",
+    title,
+    description,
+  },
 };
 
 export default function RootLayout({
