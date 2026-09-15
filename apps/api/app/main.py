@@ -1,10 +1,15 @@
+import sentry_sdk
 from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
 
 from app.core.auth import require_hr_user
 from app.core.config import settings
 from app.core.errors import register_error_handlers
+from app.core.rate_limit import limiter
 from app.routers import (
+    accounts,
     ai_tools,
     applications,
     contracts,
@@ -44,8 +49,12 @@ TAGS_METADATA = [
     {"name": "Payments", "description": "Public — Paystack payment initialization, verification, and webhook."},
     {"name": "Orders (HR)", "description": "HR — view and progress customer orders (confirm, set delivery fee, mark ready/completed)."},
     {"name": "Reports", "description": "HR — headcount, hiring funnel, payroll, turnover, sales."},
+    {"name": "Accounts", "description": "HR — create/list/remove HR portal login accounts."},
 ]
 
+
+if settings.SENTRY_DSN:
+    sentry_sdk.init(dsn=settings.SENTRY_DSN, environment=settings.ENVIRONMENT, traces_sample_rate=0.1)
 
 app = FastAPI(
     title="Lead Superstore API",
@@ -58,12 +67,16 @@ app = FastAPI(
     openapi_tags=TAGS_METADATA,
 )
 
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://localhost:3001"],
+    allow_origins=[origin.strip() for origin in settings.CORS_ORIGINS.split(",") if origin.strip()],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["Content-Disposition", "X-Missing-Bank-Details"],
 )
 
 register_error_handlers(app)
@@ -77,10 +90,16 @@ def health():
 # ============================================================================
 # Public routers FIRST — so /public matches before /{job_id} in the admin router.
 # Both jobs.public_router and jobs.admin_router mount at /api/jobs, so order matters.
+#
+# orders.admin_router is the one exception: it mounts at the more-specific
+# /api/orders/admin, which would otherwise collide with public_router's bare
+# /{order_id} on the no-trailing-slash form (GET /api/orders/admin gets
+# greedily matched as order_id="admin"). It's registered further down in the
+# HR-only block, so we register public_router's catch-all routes AFTER it —
+# see the orders.admin_router registration below for the actual ordering.
 # ============================================================================
 app.include_router(jobs.public_router, prefix="/api/jobs", tags=["Careers (Public)"])
 app.include_router(applications.public_router, prefix="/api/applications", tags=["Careers (Public)"])
-app.include_router(orders.public_router, prefix="/api/orders", tags=["Orders"])
 app.include_router(customers.router, prefix="/api/customers", tags=["Customers"])
 
 
@@ -100,8 +119,13 @@ app.include_router(contracts.router, prefix="/api/contracts", tags=["Contracts"]
 app.include_router(ai_tools.router, prefix="/api/ai", tags=["AI Tools"], dependencies=_hr_auth)
 app.include_router(jobs.admin_router, prefix="/api/jobs", tags=["Jobs (HR)"], dependencies=_hr_auth)
 app.include_router(applications.admin_router, prefix="/api/applications", tags=["Applications (HR)"], dependencies=_hr_auth)
+# Registered before orders.public_router below — /api/orders/admin (no
+# trailing slash) must match this router's routes, not public_router's bare
+# /{order_id} catch-all. See the comment on the public-routers block above.
 app.include_router(orders.admin_router, prefix="/api/orders/admin", tags=["Orders (HR)"], dependencies=_hr_auth)
+app.include_router(orders.public_router, prefix="/api/orders", tags=["Orders"])
 app.include_router(reports.router, prefix="/api/reports", tags=["Reports"], dependencies=_hr_auth)
+app.include_router(accounts.router, prefix="/api/accounts", tags=["Accounts"], dependencies=_hr_auth)
 
 # Shared reference data — used by both the HR portal and the e-commerce
 # app's outlet selector, which has no login of its own. Stays public.

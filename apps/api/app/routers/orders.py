@@ -5,11 +5,63 @@ from uuid import UUID
 from fastapi import APIRouter, HTTPException, Query, status
 
 from app.core.db import get_supabase
-from app.schemas.orders import OrderAdminUpdate, OrderCreate, OrderTrackRequest
+from app.schemas.orders import (
+    CancelOrderRequest,
+    OrderAdminUpdate,
+    OrderCreate,
+    OrderTrackRequest,
+)
 from app.services import sms
 from app.services.notifications import claim_and_notify
 
 logger = logging.getLogger(__name__)
+
+# Orders still in these statuses haven't been prepared yet — safe to cancel
+# without wasting outlet staff time or ingredients already committed.
+CUSTOMER_CANCELLABLE_STATUSES = {"pending_payment", "payment_received", "confirmed"}
+# Once an order is in any of these, nothing meaningful can be reversed — most
+# importantly, don't let a cancel restore stock that's already been handed
+# over or already accounted for as final.
+TERMINAL_STATUSES = {"completed", "cancelled", "refunded"}
+
+
+def _restore_order_stock(supabase, order: dict) -> None:
+    """Put back the stock this order reserved at checkout.
+
+    Mirrors the atomic decrement the create_order RPC performs — called when
+    an order is cancelled (by the customer or HR) so cancelling doesn't
+    permanently under-report availability. Restaurant items never carried
+    stock rows in the first place, so nothing to do for those.
+    """
+    items_resp = (
+        supabase.table("order_items")
+        .select("product_id, quantity")
+        .eq("order_id", order["id"])
+        .execute()
+    )
+    for item in items_resp.data:
+        product = (
+            supabase.table("products")
+            .select("is_restaurant_item")
+            .eq("id", item["product_id"])
+            .execute()
+        )
+        if not product.data or product.data[0]["is_restaurant_item"]:
+            continue
+
+        stock_row = (
+            supabase.table("product_stock")
+            .select("quantity")
+            .eq("product_id", item["product_id"])
+            .eq("outlet_id", order["fulfillment_outlet_id"])
+            .execute()
+        )
+        if not stock_row.data:
+            continue
+        new_quantity = stock_row.data[0]["quantity"] + item["quantity"]
+        supabase.table("product_stock").update({"quantity": new_quantity}).eq(
+            "product_id", item["product_id"]
+        ).eq("outlet_id", order["fulfillment_outlet_id"]).execute()
 
 # ============================================================================
 # Public router — checkout + order lookup for the e-commerce app
@@ -161,6 +213,52 @@ def track_order(payload: OrderTrackRequest):
     return {"order": order, "items": items_resp.data}
 
 
+@public_router.post("/cancel")
+def cancel_order(payload: CancelOrderRequest):
+    """Let a customer cancel their own order — same order number + email
+    lookup as tracking, since there's no customer login required at checkout.
+
+    Only allowed while the order hasn't been prepared yet (pending payment,
+    paid, or just confirmed). Once an outlet has started fulfilling it
+    (ready for pickup / out for delivery) or it's already in a terminal
+    state, cancellation must go through HR instead.
+    """
+    supabase = get_supabase()
+
+    order_resp = (
+        supabase.table("orders")
+        .select("*, customers!inner(email)")
+        .eq("order_number", payload.order_number)
+        .ilike("customers.email", payload.email)
+        .execute()
+    )
+    if not order_resp.data:
+        raise HTTPException(
+            status_code=404,
+            detail="No order found with that order number and email. Please check and try again.",
+        )
+    order = order_resp.data[0]
+
+    if order["status"] not in CUSTOMER_CANCELLABLE_STATUSES:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "This order can no longer be cancelled online — it's already being "
+                "prepared or has been finalized. Please contact the outlet directly."
+            ),
+        )
+
+    _restore_order_stock(supabase, order)
+
+    response = (
+        supabase.table("orders")
+        .update({"status": "cancelled", "updated_at": datetime.now(timezone.utc).isoformat()})
+        .eq("id", order["id"])
+        .execute()
+    )
+    return response.data[0]
+
+
 @public_router.get("/{order_id}")
 def get_order(order_id: UUID):
     """Fetch a single order with its items. Used by the confirmation page."""
@@ -189,7 +287,7 @@ def get_order(order_id: UUID):
 admin_router = APIRouter()
 
 
-@admin_router.get("/")
+@admin_router.get("/list")
 def list_orders(
     status_filter: str | None = Query(None, alias="status"),
     outlet_id: UUID | None = Query(None),
@@ -265,6 +363,12 @@ def update_order(order_id: UUID, payload: OrderAdminUpdate):
         raise HTTPException(status_code=404, detail="Order not found")
     order = existing.data[0]
 
+    if payload.status is not None and order["status"] in TERMINAL_STATUSES:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Order is already '{order['status']}' — its status cannot be changed further.",
+        )
+
     update_data: dict = {}
 
     if payload.delivery_fee is not None:
@@ -287,6 +391,9 @@ def update_order(order_id: UUID, payload: OrderAdminUpdate):
         raise HTTPException(status_code=400, detail="No fields to update")
 
     update_data["updated_at"] = datetime.now(timezone.utc).isoformat()
+
+    if payload.status in ("cancelled", "refunded") and order["status"] not in TERMINAL_STATUSES:
+        _restore_order_stock(supabase, order)
 
     response = (
         supabase.table("orders").update(update_data).eq("id", str(order_id)).execute()

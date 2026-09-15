@@ -38,6 +38,11 @@ class OrderTrackRequest(BaseModel):
     email: EmailStr
 
 
+class CancelOrderRequest(BaseModel):
+    order_number: str = Field(..., min_length=1, max_length=50)
+    email: EmailStr
+
+
 class OrderAdminUpdate(BaseModel):
     status: Literal[
         "confirmed",
