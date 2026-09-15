@@ -65,6 +65,16 @@ class PayrollEntryUpdate(BaseModel):
     notes: str | None = None
 
 
+class PayrollEntryAdjustment(BaseModel):
+    """A one-off manual adjustment to an entry's net pay — positive for a
+    bonus or owed back pay, negative to withhold. Always requires a comment
+    explaining why, since it's not tied to a loan/advance/fine/bond record.
+    """
+
+    amount: Decimal
+    note: str = Field(..., min_length=3, max_length=500)
+
+
 class PayrollEntry(BaseModel):
     id: UUID
     period_id: UUID

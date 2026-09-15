@@ -75,11 +75,18 @@ export const StaffSchema = z.object({
   status: StaffStatusEnum,
   hired_at: z.string().nullable(),
   terminated_at: z.string().nullable(),
+  termination_reason: z
+    .enum(["resigned", "sacked", "absconded", "other"])
+    .nullable()
+    .optional(),
+  termination_note: z.string().nullable().optional(),
   notes: z.string().nullable(),
   bank_name: z.string().nullable(),
   bank_account_number: z.string().nullable(),
   bank_account_name: z.string().nullable(),
+  bank_sort_code: z.string().nullable().optional(),
   photo_path: z.string().nullable().optional(),
+  onboarding_path: z.enum(["new_hire", "existing_staff"]).nullable().optional(),
   verified_at: z.string().nullable().optional(),
   created_at: z.string(),
   updated_at: z.string(),
@@ -330,6 +337,8 @@ export const PayrollEntrySchema = z.object({
   working_days: z.number(),
   deductions: z.number(),
   catch_up_pay: z.number().nullable().optional(),
+  adjustment_amount: z.number().nullable().optional(),
+  adjustment_note: z.string().nullable().optional(),
   net_pay: z.number(),
   bank_name: z.string().nullable(),
   bank_account_number: z.string().nullable(),
@@ -638,7 +647,7 @@ export type AdminProduct = z.infer<typeof AdminProductSchema>;
 export const StockRowSchema = z.object({
   outlet_id: z.string().uuid(),
   quantity: z.number(),
-  updated_at: z.string().optional(),
+  updated_at: z.string().nullable().optional(),
   outlets: z
     .object({ name: z.string(), city: z.string().nullable(), is_warehouse: z.boolean() })
     .nullable()
@@ -700,6 +709,24 @@ export const ContractsResponseSchema = z.object({
   count: z.number(),
   contracts: z.array(ContractSchema),
 });
+
+// ============================================================================
+// HR portal accounts
+// ============================================================================
+
+export const AccountSchema = z.object({
+  id: z.string().uuid(),
+  email: z.string().nullable(),
+  created_at: z.string(),
+  last_sign_in_at: z.string().nullable().optional(),
+});
+
+export const AccountsResponseSchema = z.object({
+  count: z.number(),
+  accounts: z.array(AccountSchema),
+});
+
+export type Account = z.infer<typeof AccountSchema>;
 
 export type Contract = z.infer<typeof ContractSchema>;
 export type ContractStatus = z.infer<typeof ContractStatusEnum>;

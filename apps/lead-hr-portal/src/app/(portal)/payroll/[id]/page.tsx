@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { use, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowLeft,
@@ -13,11 +14,13 @@ import {
   Users,
   AlertTriangle,
   Download,
+  Trash2,
 } from "lucide-react";
 import {
   fetchPeriodDetail,
   generateEntries,
   approvePeriod,
+  deletePeriod,
   addCatchUp,
 } from "@/lib/api/payroll";
 import { LoadingState, ErrorState, EmptyState } from "@/components/ui/states";
@@ -32,10 +35,13 @@ export default function PeriodDetailPage({
 }) {
   const { id } = use(params);
   const qc = useQueryClient();
+  const router = useRouter();
 
   const [downloading, setDownloading] = useState(false);
   const [downloadError, setDownloadError] = useState<string | null>(null);
   const [missingBankCount, setMissingBankCount] = useState<number | null>(null);
+  const [exportingReview, setExportingReview] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
 
   const detailQuery = useQuery({
     queryKey: ["period", id],
@@ -55,6 +61,14 @@ export default function PeriodDetailPage({
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["period", id] });
       qc.invalidateQueries({ queryKey: ["periods"] });
+    },
+  });
+
+  const deleteMut = useMutation({
+    mutationFn: () => deletePeriod(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["periods"] });
+      router.push("/payroll");
     },
   });
 
@@ -86,6 +100,38 @@ export default function PeriodDetailPage({
   const entriesMissingBankDetails = entries.filter(
     (e) => !e.bank_account_number || !e.staff?.bank_sort_code,
   );
+
+  const totalDeductions = entries.reduce((sum, e) => sum + Number(e.deductions), 0);
+  const totalProration = entries.reduce(
+    (sum, e) => sum + Number(e.gross_salary) * (1 - Number(e.working_days) / 30),
+    0,
+  );
+
+  async function downloadReviewSheet() {
+    setExportingReview(true);
+    setExportError(null);
+    try {
+      const res = await apiClient.get(
+        `/api/payroll/periods/${id}/export-review-sheet`,
+        { responseType: "blob" },
+      );
+
+      const disposition: string | undefined = res.headers["content-disposition"];
+      const match = disposition?.match(/filename="([^"]+)"/);
+      const filename = match?.[1] ?? `payroll_review_${period.outlets?.name ?? "outlet"}.xlsx`;
+
+      const url = URL.createObjectURL(res.data);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      setExportError((err as Error).message);
+    } finally {
+      setExportingReview(false);
+    }
+  }
 
   async function downloadBankSheet() {
     setDownloading(true);
@@ -158,12 +204,22 @@ export default function PeriodDetailPage({
         </div>
 
         {/* Stats */}
-        <div className="mt-6 grid grid-cols-3 gap-4 border-t border-stone-100 pt-4 text-sm">
+        <div className="mt-6 grid grid-cols-2 gap-4 border-t border-stone-100 pt-4 text-sm sm:grid-cols-5">
           <Stat icon={Users} label="Entries" value={entries.length.toString()} />
           <Stat
             icon={Wallet}
             label="Total gross"
             value={formatNaira(Number(period.total_gross))}
+          />
+          <Stat
+            icon={Wallet}
+            label="Deductions"
+            value={totalDeductions > 0 ? `− ${formatNaira(totalDeductions)}` : "—"}
+          />
+          <Stat
+            icon={Wallet}
+            label="Proration"
+            value={totalProration > 0 ? `− ${formatNaira(totalProration)}` : "—"}
           />
           <Stat
             icon={Wallet}
@@ -229,6 +285,32 @@ export default function PeriodDetailPage({
                   {approveMut.isPending ? "Approving…" : "Approve & lock"}
                 </button>
               )}
+              {hasEntries && (
+                <button
+                  onClick={downloadReviewSheet}
+                  disabled={exportingReview}
+                  className="inline-flex items-center gap-1.5 rounded-md border border-stone-300 bg-white px-3 py-2 text-xs font-medium text-stone-700 hover:bg-stone-50 disabled:opacity-50"
+                >
+                  <Download className="h-3.5 w-3.5" />
+                  {exportingReview ? "Preparing…" : "Export for review"}
+                </button>
+              )}
+              <button
+                onClick={() => {
+                  if (
+                    confirm(
+                      "Delete this draft payroll period? This permanently removes it and all its entries. This cannot be undone.",
+                    )
+                  ) {
+                    deleteMut.mutate();
+                  }
+                }}
+                disabled={deleteMut.isPending}
+                className="inline-flex items-center gap-1.5 rounded-md border border-red-300 bg-white px-3 py-2 text-xs font-medium text-red-700 hover:bg-red-50 disabled:opacity-50"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+                {deleteMut.isPending ? "Deleting…" : "Delete"}
+              </button>
             </div>
           </div>
 
@@ -242,6 +324,31 @@ export default function PeriodDetailPage({
               {(approveMut.error as Error).message}
             </div>
           )}
+          {deleteMut.isError && (
+            <div className="mt-3 rounded-md border border-red-200 bg-white p-3 text-xs text-red-700">
+              {(deleteMut.error as Error).message}
+            </div>
+          )}
+          {exportError && (
+            <div className="mt-3 rounded-md border border-red-200 bg-white p-3 text-xs text-red-700">
+              {exportError}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Export for review — approved periods have no action bar above, so it needs its own home here */}
+      {!isDraft && hasEntries && (
+        <div className="flex items-center justify-end gap-2">
+          <button
+            onClick={downloadReviewSheet}
+            disabled={exportingReview}
+            className="inline-flex items-center gap-1.5 rounded-md border border-stone-300 bg-white px-3 py-2 text-xs font-medium text-stone-700 hover:bg-stone-50 disabled:opacity-50"
+          >
+            <Download className="h-3.5 w-3.5" />
+            {exportingReview ? "Preparing…" : "Export for review"}
+          </button>
+          {exportError && <p className="text-xs text-red-600">{exportError}</p>}
         </div>
       )}
 
@@ -453,9 +560,7 @@ export default function PeriodDetailPage({
                 </td>
                 <td />
                 <td className="px-4 py-3 text-right text-red-700">
-                  {Number(period.total_gross) - Number(period.total_net) > 0
-                    ? `− ${formatNaira(Number(period.total_gross) - Number(period.total_net))}`
-                    : "—"}
+                  {totalDeductions > 0 ? `− ${formatNaira(totalDeductions)}` : "—"}
                 </td>
                 <td className="px-4 py-3 text-right font-bold text-black">
                   {formatNaira(Number(period.total_net))}

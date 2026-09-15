@@ -13,6 +13,7 @@ from fastapi.responses import StreamingResponse
 from app.core.db import get_supabase
 from app.schemas.payroll import (
     AddCatchUpRequest,
+    PayrollEntryAdjustment,
     PayrollEntryUpdate,
     PayrollPeriodCreate,
     SalaryStructureCreate,
@@ -27,6 +28,8 @@ from app.services.payroll import (
 )
 from app.services.payroll_entry import StaffPayrollInput, compute_entry_for_staff
 from app.services import training_bond
+from app.services import payslip as payslip_service
+from xhtml2pdf import pisa
 
 router = APIRouter()
 
@@ -53,7 +56,10 @@ def create_salary_structure(payload: SalaryStructureCreate):
     """Set a new gross salary for a staff member.
 
     Closes any open structure by setting its effective_to to the day before
-    this new one starts.
+    this new one starts. Also recomputes gross_salary/net_pay on any of this
+    staff member's DRAFT payroll entries — otherwise an already-generated
+    draft keeps paying out the old salary until someone notices and clicks
+    Regenerate. Approved/locked periods are never touched.
     """
     supabase = get_supabase()
 
@@ -73,7 +79,47 @@ def create_salary_structure(payload: SalaryStructureCreate):
 
     insert_data = payload.model_dump(mode="json")
     response = supabase.table("salary_structures").insert(insert_data).execute()
-    return response.data[0]
+    structure = response.data[0]
+
+    adjustments = _update_draft_entries_gross_salary(
+        supabase, payload.staff_id, payload.gross_salary
+    )
+
+    return {**structure, "adjustments": adjustments}
+
+
+def _update_draft_entries_gross_salary(
+    supabase, staff_id, new_gross: Decimal
+) -> list[str]:
+    """Recompute gross_salary/net_pay on this staff member's draft payroll
+    entries after a salary change. Returns notes on what was adjusted.
+    """
+    draft_entries = (
+        supabase.table("payroll_entries")
+        .select(
+            "id, period_id, working_days, deductions, adjustment_amount, "
+            "payroll_periods!inner(status)"
+        )
+        .eq("staff_id", str(staff_id))
+        .eq("payroll_periods.status", "draft")
+        .execute()
+    )
+
+    notes: list[str] = []
+    for entry in draft_entries.data:
+        new_net = compute_net_salary(
+            gross_salary=Decimal(str(new_gross)),
+            working_days=entry["working_days"],
+            deductions=Decimal(str(entry["deductions"])),
+        )
+        new_net += Decimal(str(entry.get("adjustment_amount") or 0))
+        supabase.table("payroll_entries").update(
+            {"gross_salary": float(new_gross), "net_pay": float(new_net)}
+        ).eq("id", entry["id"]).execute()
+        _refresh_period_totals(supabase, entry["period_id"])
+        notes.append("Updated gross pay and recomputed net pay on a draft payroll entry.")
+
+    return notes
 
 
 # ============================================================================
@@ -123,6 +169,66 @@ def get_payroll_period(period_id: UUID):
     return {"period": period.data, "entries": entries.data}
 
 
+@router.delete("/periods/{period_id}", status_code=status.HTTP_200_OK)
+def delete_payroll_period(period_id: UUID):
+    """Delete a draft payroll period and its entries.
+
+    Only draft periods can be deleted — approving a period commits loan
+    balance decrements and training bond totals, which are not reversible
+    here, so an approved/locked period must stay.
+    """
+    supabase = get_supabase()
+
+    period = (
+        supabase.table("payroll_periods")
+        .select("status")
+        .eq("id", str(period_id))
+        .single()
+        .execute()
+    )
+    if not period.data:
+        raise HTTPException(status_code=404, detail="Payroll period not found")
+    if period.data["status"] != "draft":
+        raise HTTPException(
+            status_code=400, detail="Only draft periods can be deleted"
+        )
+
+    entry_ids = [
+        e["id"]
+        for e in supabase.table("payroll_entries")
+        .select("id")
+        .eq("period_id", str(period_id))
+        .execute()
+        .data
+    ]
+
+    # Release advances/fines this period had claimed, same as regenerating
+    # does — otherwise they stay stuck as "applied" pointing at a period_id
+    # that no longer exists, silently excluded from every future generation.
+    supabase.table("salary_advances").update(
+        {"status": "pending", "applied_to_period_id": None}
+    ).eq("applied_to_period_id", str(period_id)).execute()
+    supabase.table("fines").update(
+        {"status": "approved", "applied_to_period_id": None}
+    ).eq("applied_to_period_id", str(period_id)).execute()
+
+    if entry_ids:
+        supabase.table("payroll_entry_deductions").delete().in_(
+            "entry_id", entry_ids
+        ).execute()
+        supabase.table("payroll_entry_bond_items").delete().in_(
+            "entry_id", entry_ids
+        ).execute()
+        supabase.table("payroll_entry_catchups").delete().in_(
+            "entry_id", entry_ids
+        ).execute()
+        supabase.table("payroll_entries").delete().in_("id", entry_ids).execute()
+
+    supabase.table("payroll_periods").delete().eq("id", str(period_id)).execute()
+
+    return {"deleted": True}
+
+
 @router.post("/periods", status_code=status.HTTP_201_CREATED)
 def create_payroll_period(payload: PayrollPeriodCreate):
     """Create a draft payroll period for an outlet."""
@@ -167,9 +273,36 @@ def generate_payroll_entries(period_id: UUID):
             detail="Cannot regenerate — period is no longer in draft",
         )
 
-    outlet_id = period.data["outlet_id"]
-    period_start_str = period.data["period_start"]
-    period_end = period.data["period_end"]
+    # Atomic lock: flip draft -> generating conditioned on it still being
+    # draft. If a second concurrent request races in here, its conditional
+    # update matches 0 rows (status is already 'generating') and it's
+    # rejected with 409 instead of silently interleaving writes with this
+    # run — the original cause of a batch of fine deductions going missing.
+    lock_resp = (
+        supabase.table("payroll_periods")
+        .update({"status": "generating"})
+        .eq("id", str(period_id))
+        .eq("status", "draft")
+        .execute()
+    )
+    if not lock_resp.data:
+        raise HTTPException(
+            status_code=409,
+            detail="Another generation is already in progress for this period",
+        )
+
+    try:
+        return _run_generate_payroll_entries(supabase, period_id, period.data)
+    finally:
+        supabase.table("payroll_periods").update({"status": "draft"}).eq(
+            "id", str(period_id)
+        ).execute()
+
+
+def _run_generate_payroll_entries(supabase, period_id: UUID, period_row: dict) -> dict:
+    outlet_id = period_row["outlet_id"]
+    period_start_str = period_row["period_start"]
+    period_end = period_row["period_end"]
     period_start = date.fromisoformat(period_start_str)
     period_end_date = date.fromisoformat(period_end)
 
@@ -300,6 +433,17 @@ def generate_payroll_entries(period_id: UUID):
     skipped: list[str] = []
     backdated: list[dict] = []
 
+    # Entries/deductions/bond items are computed per staff below (no I/O)
+    # then written in bulk after the loop — one insert per table instead of
+    # one round trip per staff. At outlet scale (70-100+ staff) the old
+    # per-staff insert loop could exceed the frontend's 30s request timeout
+    # partway through, leaving some staff (including whoever had a loan/fine
+    # queued for later in the list) with no entry at all.
+    entries_to_insert: list[dict] = []
+    entry_staff_order: list[dict] = []  # parallel to entries_to_insert
+    advance_ids_applied: list[str] = []
+    fine_ids_applied: list[str] = []
+
     for staff in staff_list:
         # Find active salary structure
         active = next(
@@ -349,60 +493,87 @@ def generate_payroll_entries(period_id: UUID):
         )
         result = compute_entry_for_staff(staff_input, period_start, period_end_date)
 
-        # Mark advances/fines applied to this period
-        for adv_id in result.advance_ids_to_apply:
-            supabase.table("salary_advances").update(
-                {"status": "applied", "applied_to_period_id": str(period_id)}
-            ).eq("id", adv_id).execute()
-        for fine_id in result.fine_ids_to_apply:
-            supabase.table("fines").update(
-                {"status": "applied", "applied_to_period_id": str(period_id)}
-            ).eq("id", fine_id).execute()
+        advance_ids_applied.extend(result.advance_ids_to_apply)
+        fine_ids_applied.extend(result.fine_ids_to_apply)
 
-        # Insert entry
-        entry_resp = (
-            supabase.table("payroll_entries")
-            .insert(
-                {
-                    "period_id": str(period_id),
-                    "staff_id": staff["id"],
-                    "gross_salary": float(result.gross_salary),
-                    "working_days": result.working_days,
-                    "deductions": float(result.total_deductions),
-                    "net_pay": float(result.net_pay),
-                    "bank_name": staff.get("bank_name"),
-                    "bank_account_number": staff.get("bank_account_number"),
-                    "bank_account_name": staff.get("bank_account_name"),
-                    "payment_status": "pending",
-                }
-            )
-            .execute()
+        entries_to_insert.append(
+            {
+                "period_id": str(period_id),
+                "staff_id": staff["id"],
+                "gross_salary": float(result.gross_salary),
+                "working_days": result.working_days,
+                "deductions": float(result.total_deductions),
+                "net_pay": float(result.net_pay),
+                "bank_name": staff.get("bank_name"),
+                "bank_account_number": staff.get("bank_account_number"),
+                "bank_account_name": staff.get("bank_account_name"),
+                "payment_status": "pending",
+            }
         )
-        entry_id = entry_resp.data[0]["id"]
+        entry_staff_order.append(
+            {
+                "staff": staff,
+                "hired_at": hired_at,
+                "gross": gross,
+                "bond": bond,
+                "deduction_items": result.deduction_items,
+                "bond_item": result.bond_item,
+            }
+        )
 
-        # Snapshot deduction items
-        if result.deduction_items:
-            for item in result.deduction_items:
-                item["entry_id"] = entry_id
-            supabase.table("payroll_entry_deductions").insert(
-                result.deduction_items
-            ).execute()
+        total_gross += gross
+        total_net += result.net_pay
 
-        # Snapshot bond item (deduct items are also in payroll_entry_deductions above
-        # for the deductions total; this table is the source of truth for bond state)
-        if result.bond_item and bond:
-            training_bond.record_bond_item(supabase, bond["id"], result.bond_item, entry_id)
+    # === Bulk-write everything computed above ===
+    # Mark advances/fines applied to this period, in as few round trips as
+    # the client supports (still N calls if it doesn't support .in_() on
+    # update, but at minimum this replaces per-staff serial calls below).
+    if advance_ids_applied:
+        supabase.table("salary_advances").update(
+            {"status": "applied", "applied_to_period_id": str(period_id)}
+        ).in_("id", advance_ids_applied).execute()
+    if fine_ids_applied:
+        supabase.table("fines").update(
+            {"status": "applied", "applied_to_period_id": str(period_id)}
+        ).in_("id", fine_ids_applied).execute()
+
+    inserted_entries = (
+        supabase.table("payroll_entries").insert(entries_to_insert).execute().data
+        if entries_to_insert
+        else []
+    )
+
+    # Supabase preserves insert order in the response, so zip back up with
+    # the per-staff data computed above to snapshot deductions/bond items
+    # and detect backdated periods against the now-real entry_id.
+    all_deduction_items: list[dict] = []
+    bond_items_to_record: list[tuple[dict, dict, str]] = []
+    for entry_row, staff_data in zip(inserted_entries, entry_staff_order):
+        entry_id = entry_row["id"]
+        staff = staff_data["staff"]
+
+        for item in staff_data["deduction_items"]:
+            item["entry_id"] = entry_id
+        all_deduction_items.extend(staff_data["deduction_items"])
+
+        if staff_data["bond_item"] and staff_data["bond"]:
+            bond_items_to_record.append(
+                (staff_data["bond"], staff_data["bond_item"], entry_id)
+            )
 
         # === Detect backdated periods (Phase 8b) ===
         # Never auto-included — surfaced for HR to review and explicitly approve
         # via POST /entries/{entry_id}/catch-up.
+        hired_at = staff_data["hired_at"]
         if hired_at:
             missed = find_backdated_periods(
                 prior_periods, staff["id"], hired_at, existing_entry_keys
             )
             for m in missed:
                 estimated = compute_net_salary(
-                    gross_salary=gross, working_days=m["days_owed"], deductions=Decimal("0")
+                    gross_salary=staff_data["gross"],
+                    working_days=m["days_owed"],
+                    deductions=Decimal("0"),
                 )
                 backdated.append(
                     {
@@ -418,8 +589,13 @@ def generate_payroll_entries(period_id: UUID):
                     }
                 )
 
-        total_gross += gross
-        total_net += result.net_pay
+    if all_deduction_items:
+        supabase.table("payroll_entry_deductions").insert(all_deduction_items).execute()
+
+    training_bond.record_bond_items_bulk(
+        supabase,
+        [(bond["id"], bond_item, entry_id) for bond, bond_item, entry_id in bond_items_to_record],
+    )
 
     supabase.table("payroll_periods").update(
         {"total_gross": float(total_gross), "total_net": float(total_net)}
@@ -542,6 +718,10 @@ def update_payroll_entry(entry_id: UUID, payload: PayrollEntryUpdate):
     net = compute_net_salary(
         gross_salary=gross, working_days=working_days, deductions=deductions
     )
+    # Preserve any manual adjustment already set on this entry — otherwise
+    # editing gross/days/deductions here would silently wipe out a bonus or
+    # withholding someone applied earlier via set_entry_adjustment.
+    net += Decimal(str(entry.data.get("adjustment_amount") or 0))
 
     update_data = {
         "gross_salary": float(gross),
@@ -561,6 +741,128 @@ def update_payroll_entry(entry_id: UUID, payload: PayrollEntryUpdate):
 
     _refresh_period_totals(supabase, entry.data["period_id"])
     return response.data[0]
+
+
+@router.patch("/entries/{entry_id}/adjustment")
+def set_entry_adjustment(entry_id: UUID, payload: PayrollEntryAdjustment):
+    """Set a one-off manual adjustment on a draft entry — positive for a
+    bonus/owed back pay, negative to withhold. Recomputes net pay on top of
+    the existing gross/working-days/deductions math. Always overwrites any
+    prior adjustment on this entry rather than stacking (one adjustment per
+    entry per period, with a fresh comment for whatever it currently is).
+    """
+    supabase = get_supabase()
+
+    entry = (
+        supabase.table("payroll_entries")
+        .select("*, payroll_periods(status)")
+        .eq("id", str(entry_id))
+        .single()
+        .execute()
+    )
+    if not entry.data:
+        raise HTTPException(status_code=404, detail="Payroll entry not found")
+    if entry.data["payroll_periods"]["status"] != "draft":
+        raise HTTPException(
+            status_code=400, detail="Cannot edit entries in an approved period"
+        )
+
+    base_net = compute_net_salary(
+        gross_salary=Decimal(str(entry.data["gross_salary"])),
+        working_days=entry.data["working_days"],
+        deductions=Decimal(str(entry.data["deductions"])),
+    )
+    new_net = base_net + payload.amount
+
+    response = (
+        supabase.table("payroll_entries")
+        .update(
+            {
+                "adjustment_amount": float(payload.amount),
+                "adjustment_note": payload.note,
+                "net_pay": float(new_net),
+            }
+        )
+        .eq("id", str(entry_id))
+        .execute()
+    )
+
+    _refresh_period_totals(supabase, entry.data["period_id"])
+    return response.data[0]
+
+
+@router.get("/entries/{entry_id}/payslip")
+def download_payslip(entry_id: UUID):
+    """Generate a per-employee pay slip PDF for this entry's period.
+
+    Available at any period status — for a draft period the numbers are
+    whatever the entry currently holds and can still change before approval.
+    """
+    supabase = get_supabase()
+
+    entry_resp = (
+        supabase.table("payroll_entries")
+        .select(
+            "gross_salary, working_days, adjustment_amount, adjustment_note, net_pay, "
+            "staff(first_name, last_name, roles(name)), "
+            "payroll_periods(period_start, period_end, status, outlets(name))"
+        )
+        .eq("id", str(entry_id))
+        .single()
+        .execute()
+    )
+    if not entry_resp.data:
+        raise HTTPException(status_code=404, detail="Payroll entry not found")
+    entry = entry_resp.data
+
+    deductions_resp = (
+        supabase.table("payroll_entry_deductions")
+        .select("*")
+        .eq("entry_id", str(entry_id))
+        .execute()
+    )
+
+    staff = entry.get("staff") or {}
+    period = entry.get("payroll_periods") or {}
+    staff_name = f"{staff.get('first_name', '')} {staff.get('last_name', '')}".strip()
+    role_name = (staff.get("roles") or {}).get("name", "—")
+    outlet_name = (period.get("outlets") or {}).get("name", "—")
+
+    period_start = date.fromisoformat(period["period_start"])
+    period_end = date.fromisoformat(period["period_end"])
+    period_label = (
+        period_start.strftime("%B %Y")
+        if period_start.month == period_end.month
+        else f"{period_start.strftime('%d %b %Y')} - {period_end.strftime('%d %b %Y')}"
+    )
+
+    html = payslip_service.generate_payslip_html(
+        staff_name=staff_name,
+        role_name=role_name,
+        outlet_name=outlet_name,
+        period_label=period_label,
+        period_status=period.get("status", ""),
+        gross_salary=Decimal(str(entry["gross_salary"])),
+        working_days=entry["working_days"],
+        deduction_items=deductions_resp.data,
+        adjustment_amount=Decimal(str(entry.get("adjustment_amount") or 0)),
+        adjustment_note=entry.get("adjustment_note"),
+        net_pay=Decimal(str(entry["net_pay"])),
+    )
+
+    pdf_buffer = BytesIO()
+    pisa_result = pisa.CreatePDF(html, dest=pdf_buffer)
+    if pisa_result.err:
+        raise HTTPException(status_code=500, detail="Failed to render pay slip to PDF")
+    pdf_buffer.seek(0)
+
+    filename = f"{staff_name.replace(' ', '_')}_payslip_{period_end.strftime('%b%Y')}.pdf"
+
+    return StreamingResponse(
+        pdf_buffer,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
 
 
 @router.get("/entries/{entry_id}/deductions")
@@ -709,6 +1011,104 @@ def _refresh_period_totals(supabase, period_id: str) -> None:
 # ============================================================================
 # Export bank sheet
 # ============================================================================
+@router.get("/periods/{period_id}/export-review-sheet")
+def export_review_sheet(period_id: UUID):
+    """Export a human-readable payroll sheet for review — any status, not
+    just approved. Meant for sending to someone (e.g. a manager or the
+    outlet owner) to check before clicking Approve & lock, unlike
+    export-bank-sheet which is the strict bank-upload format for approved
+    periods only.
+    """
+    supabase = get_supabase()
+
+    period_resp = (
+        supabase.table("payroll_periods")
+        .select("*, outlets(name)")
+        .eq("id", str(period_id))
+        .single()
+        .execute()
+    )
+    if not period_resp.data:
+        raise HTTPException(status_code=404, detail="Payroll period not found")
+    period = period_resp.data
+
+    entries_resp = (
+        supabase.table("payroll_entries")
+        .select(
+            "gross_salary, working_days, deductions, net_pay, "
+            "staff(first_name, last_name, roles(name))"
+        )
+        .eq("period_id", str(period_id))
+        .execute()
+    )
+    if not entries_resp.data:
+        raise HTTPException(status_code=400, detail="No payroll entries to export for this period")
+
+    outlet_name = (period.get("outlets") or {}).get("name", "Outlet")
+    period_start = date.fromisoformat(period["period_start"])
+    period_end = date.fromisoformat(period["period_end"])
+    period_label = f"{period_start.strftime('%d %b %Y')} - {period_end.strftime('%d %b %Y')}"
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = outlet_name[:31]
+
+    ws.append([outlet_name])
+    ws.append([f"Payroll period: {period_label}"])
+    ws.append([f"Status: {period['status'].upper()}"])
+    ws.append([])
+
+    headers = ["Employee", "Role", "Gross Pay", "Days Worked", "Deductions", "Net Pay"]
+    ws.append(headers)
+    for cell in ws[ws.max_row]:
+        cell.font = Font(bold=True)
+
+    total_gross = Decimal("0")
+    total_deductions = Decimal("0")
+    total_net = Decimal("0")
+    for e in sorted(
+        entries_resp.data,
+        key=lambda e: (
+            (e.get("staff") or {}).get("first_name", ""),
+            (e.get("staff") or {}).get("last_name", ""),
+        ),
+    ):
+        staff = e.get("staff") or {}
+        full_name = f"{staff.get('first_name', '')} {staff.get('last_name', '')}".strip()
+        role_name = (staff.get("roles") or {}).get("name", "")
+        gross = Decimal(str(e["gross_salary"]))
+        deductions = Decimal(str(e["deductions"]))
+        net = Decimal(str(e["net_pay"]))
+        total_gross += gross
+        total_deductions += deductions
+        total_net += net
+        ws.append([
+            full_name,
+            role_name,
+            float(gross),
+            e["working_days"],
+            float(deductions),
+            float(net),
+        ])
+
+    ws.append([])
+    ws.append(["Total", "", float(total_gross), "", float(total_deductions), float(total_net)])
+    for cell in ws[ws.max_row]:
+        cell.font = Font(bold=True)
+
+    buffer = BytesIO()
+    wb.save(buffer)
+    buffer.seek(0)
+
+    filename = f"{outlet_name.replace(' ', '_')}_payroll_review_{period_end.strftime('%b%Y')}.xlsx"
+
+    return StreamingResponse(
+        buffer,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
 @router.get("/periods/{period_id}/export-bank-sheet")
 def export_bank_sheet(period_id: UUID):
     """Export approved payroll entries as a bulk bank-payment xlsx.

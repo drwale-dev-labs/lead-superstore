@@ -71,6 +71,10 @@ export async function approvePeriod(periodId: string): Promise<PayrollPeriod> {
   return PayrollPeriodSchema.parse(data);
 }
 
+export async function deletePeriod(periodId: string): Promise<void> {
+  await apiClient.delete(`/api/payroll/periods/${periodId}`);
+}
+
 // ============================================================================
 // Entries
 // ============================================================================
@@ -88,6 +92,17 @@ export async function updateEntry(
 ): Promise<PayrollEntry> {
   const { data } = await apiClient.patch(
     `/api/payroll/entries/${entryId}`,
+    payload,
+  );
+  return PayrollEntrySchema.parse(data);
+}
+
+export async function setEntryAdjustment(
+  entryId: string,
+  payload: { amount: number; note: string },
+): Promise<PayrollEntry> {
+  const { data } = await apiClient.patch(
+    `/api/payroll/entries/${entryId}/adjustment`,
     payload,
   );
   return PayrollEntrySchema.parse(data);
