@@ -27,6 +27,7 @@ export type CreateLoanPayload = {
   staff_id: string;
   principal: number;
   monthly_installment: number;
+  start_date: string;
   notes?: string;
 };
 

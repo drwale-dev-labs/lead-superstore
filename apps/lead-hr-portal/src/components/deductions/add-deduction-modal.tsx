@@ -43,6 +43,7 @@ type Props = {
 export function AddDeductionModal({ type, open, onClose }: Props) {
   const qc = useQueryClient();
   const meta = TYPE_META[type];
+  const today = new Date().toISOString().slice(0, 10);
 
   const staffQuery = useQuery({
     queryKey: ["staff", "active-and-onboarding"],
@@ -90,6 +91,7 @@ export function AddDeductionModal({ type, open, onClose }: Props) {
         monthly_installment: parseFloat(
           form.get("monthly_installment") as string,
         ),
+        start_date: form.get("start_date") as string,
         notes: reason,
       });
     } else if (type === "advance") {
@@ -164,6 +166,15 @@ export function AddDeductionModal({ type, open, onClose }: Props) {
                   required
                   className={inputCls}
                   placeholder="20000"
+                />
+              </Field>
+              <Field label="Start date" required>
+                <input
+                  name="start_date"
+                  type="date"
+                  required
+                  defaultValue={today}
+                  className={inputCls}
                 />
               </Field>
             </div>
