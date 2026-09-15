@@ -19,6 +19,7 @@ class StaffBase(BaseModel):
     bank_account_name: str | None = Field(None, max_length=200)
     bank_sort_code: str | None = Field(None, max_length=20)
     photo_path: str | None = None
+    onboarding_path: str | None = Field(None, pattern="^(new_hire|existing_staff)$")
 
 
 class StaffCreate(StaffBase):
@@ -57,6 +58,8 @@ class Staff(StaffBase):
     status: str
     hired_at: date | None = None
     terminated_at: date | None = None
+    termination_reason: str | None = None
+    termination_note: str | None = None
     created_at: datetime
     updated_at: datetime
     photo_path: str | None = None

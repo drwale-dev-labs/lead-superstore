@@ -126,35 +126,23 @@ def compute_entry_for_staff(
         fine_ids_to_apply.append(fine["id"])
 
     # 4. Training bond (₦5,000/month deduction for months 1-6, payback months
-    # 7-12). Deduction is prorated like the loan installment above; payback is
-    # not prorated (it's the company returning money already deducted in full
-    # months).
+    # 7-12). Flat amount both ways — not prorated by days worked, unlike a
+    # loan installment. The bond is a fixed monthly fee tied to which month
+    # of the schedule this period falls in, not to attendance.
     bond_item = None
     if staff.bond:
         bond_item = compute_bond_item(staff.bond, period_end)
         if bond_item and bond_item["direction"] == "deduct":
-            prorated_amount = (bond_item["amount"] * proration_ratio).quantize(
-                Decimal("0.01")
-            )
-            prorated_note = (
-                f" — prorated for {working_days}/30 days" if working_days < 30 else ""
-            )
+            amount = bond_item["amount"]
             deduction_items.append(
                 {
                     "source_type": "training_bond",
                     "source_id": staff.bond["id"],
-                    "amount": float(prorated_amount),
-                    "description": (
-                        f"Training bond deduction (month {bond_item['month_number']} of 6)"
-                        f"{prorated_note}"
-                    ),
+                    "amount": float(amount),
+                    "description": f"Training bond deduction (month {bond_item['month_number']} of 6)",
                 }
             )
-            total_deductions += prorated_amount
-            # Keep the item's amount in sync with what was actually charged,
-            # so the caller commits the prorated figure, not the flat
-            # monthly rate — this is the source of truth for running totals.
-            bond_item["amount"] = prorated_amount
+            total_deductions += amount
 
     net = compute_net_salary(
         gross_salary=staff.gross_salary, working_days=working_days, deductions=total_deductions

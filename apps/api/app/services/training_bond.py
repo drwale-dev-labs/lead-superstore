@@ -1,6 +1,7 @@
 """Training bond — a ₦5,000/month deduction for the first 6 months of a new
 hire's employment, paid back at the same rate across months 7–12 if they're
-still employed. Applies only to staff hired on or after FEATURE_LAUNCH_DATE.
+still employed. Applies to every staff member, based purely on their
+hired_at date — there is no launch-date cutoff.
 
 Rules (confirmed with the business owner):
 - Months 1-6 of employment: deduct ₦5,000/month.
@@ -16,14 +17,13 @@ from datetime import date
 from decimal import Decimal
 from uuid import UUID
 
-FEATURE_LAUNCH_DATE = date(2026, 8, 11)
 MONTHLY_AMOUNT = Decimal("5000")
 DEDUCTION_MONTHS = 6
 PAYBACK_MONTHS = 12
 
 
 def is_eligible_for_bond(hired_at: date) -> bool:
-    return hired_at >= FEATURE_LAUNCH_DATE
+    return True
 
 
 def months_elapsed(hired_at: date, as_of: date) -> int:
@@ -82,6 +82,15 @@ def get_or_create_bond(
     if not is_eligible_for_bond(hired_at):
         return None
 
+    # A bond only makes sense if it's created while the staff member is
+    # still within the deduction window (months 1-6). If they're already
+    # past month 6 the first time this runs, nothing was ever actually
+    # deducted from them under this system — creating a bond now would let
+    # compute_bond_item treat them as being in payback phase and pay out
+    # ₦5,000/month for money that was never collected. Skip entirely.
+    if months_elapsed(hired_at, date.today()) > DEDUCTION_MONTHS:
+        return None
+
     created = (
         supabase.table("training_bonds")
         .insert(
@@ -130,6 +139,28 @@ def record_bond_item(supabase, bond_id: str, item: dict, entry_id: str) -> None:
             "amount": float(item["amount"]),
             "month_number": item["month_number"],
         }
+    ).execute()
+
+
+def record_bond_items_bulk(
+    supabase, items: list[tuple[str, dict, str]]
+) -> None:
+    """Batch version of record_bond_item — one insert instead of one per
+    staff member. Each tuple is (bond_id, item, entry_id).
+    """
+    if not items:
+        return
+    supabase.table("payroll_entry_bond_items").insert(
+        [
+            {
+                "entry_id": entry_id,
+                "bond_id": bond_id,
+                "direction": item["direction"],
+                "amount": float(item["amount"]),
+                "month_number": item["month_number"],
+            }
+            for bond_id, item, entry_id in items
+        ]
     ).execute()
 
 

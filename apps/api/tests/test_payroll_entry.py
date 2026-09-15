@@ -138,7 +138,7 @@ def test_stacked_deductions_sum_correctly():
     assert len(result.deduction_items) == 3
 
 
-def test_training_bond_deduction_prorated_for_mid_period_hire():
+def test_training_bond_deduction_flat_for_mid_period_hire():
     bond = {
         "id": "bond-1",
         "staff_id": "staff-1",
@@ -150,11 +150,10 @@ def test_training_bond_deduction_prorated_for_mid_period_hire():
     staff = make_staff(hired_at=date(2026, 8, 16), bond=bond)
     result = compute_entry_for_staff(staff, PERIOD_START, PERIOD_END)
 
-    # Month 1 of the bond -> deduct ₦5000, prorated by 16/30
-    expected = (Decimal("5000") * Decimal(16) / Decimal(30)).quantize(Decimal("0.01"))
+    # Month 1 of the bond -> deduct a flat ₦5000, not prorated by days worked
     assert result.bond_item["direction"] == "deduct"
-    assert result.bond_item["amount"] == expected
-    assert result.total_deductions == expected
+    assert result.bond_item["amount"] == Decimal("5000")
+    assert result.total_deductions == Decimal("5000")
 
 
 def test_training_bond_payback_added_to_net_not_prorated():
