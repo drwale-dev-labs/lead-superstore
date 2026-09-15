@@ -19,6 +19,7 @@ import {
   ShoppingBag,
   Boxes,
   LogOut,
+  KeyRound,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
@@ -52,6 +53,7 @@ const NAV_ITEMS: NavItem[] = [
 
   // Insights
   { label: "Reports", href: "/reports", icon: BarChart3, group: "Insights" },
+  { label: "Accounts", href: "/accounts", icon: KeyRound, group: "Insights" },
 
   // E-commerce
   { label: "Orders", href: "/orders", icon: ShoppingBag, group: "E-commerce", badge: "NEW" },
