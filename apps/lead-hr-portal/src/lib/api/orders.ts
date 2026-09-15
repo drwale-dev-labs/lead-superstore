@@ -15,7 +15,7 @@ export type OrderFilters = {
 };
 
 export async function fetchOrders(filters?: OrderFilters): Promise<Order[]> {
-  const { data } = await apiClient.get("/api/orders/admin/", { params: filters });
+  const { data } = await apiClient.get("/api/orders/admin/list", { params: filters });
   return OrdersResponseSchema.parse(data).orders;
 }
 

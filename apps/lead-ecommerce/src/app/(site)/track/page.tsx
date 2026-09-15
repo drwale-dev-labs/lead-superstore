@@ -1,9 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { PackageSearch } from "lucide-react";
-import { trackOrder } from "@/lib/api/orders";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { PackageSearch, XCircle } from "lucide-react";
+import { trackOrder, cancelOrder } from "@/lib/api/orders";
 import { OrderSummary } from "@/components/shop/order-summary";
 
 const ACTIVE_STATUSES = new Set([
@@ -14,7 +14,14 @@ const ACTIVE_STATUSES = new Set([
   "out_for_delivery",
 ]);
 
+const CUSTOMER_CANCELLABLE_STATUSES = new Set([
+  "pending_payment",
+  "payment_received",
+  "confirmed",
+]);
+
 export default function TrackOrderPage() {
+  const qc = useQueryClient();
   const [orderNumber, setOrderNumber] = useState("");
   const [email, setEmail] = useState("");
   const [submitted, setSubmitted] = useState<{ orderNumber: string; email: string } | null>(
@@ -32,8 +39,18 @@ export default function TrackOrderPage() {
       q.state.data && ACTIVE_STATUSES.has(q.state.data.order.status) ? 15_000 : false,
   });
 
+  const cancelMutation = useMutation({
+    mutationFn: () => cancelOrder(submitted!.orderNumber, submitted!.email),
+    onSuccess: () => {
+      qc.invalidateQueries({
+        queryKey: ["track-order", submitted?.orderNumber, submitted?.email],
+      });
+    },
+  });
+
   const result = query.data;
   const stillActive = result ? ACTIVE_STATUSES.has(result.order.status) : false;
+  const canCancel = result ? CUSTOMER_CANCELLABLE_STATUSES.has(result.order.status) : false;
 
   return (
     <div className="mx-auto max-w-2xl px-6 py-12">
@@ -101,6 +118,32 @@ export default function TrackOrderPage() {
             )}
           </div>
           <OrderSummary order={result.order} items={result.items} />
+
+          {canCancel && (
+            <div className="mt-4 rounded-lg border border-red-200 bg-red-50 p-4 text-center">
+              {cancelMutation.isError && (
+                <p className="mb-2 text-xs text-red-700">
+                  {(cancelMutation.error as Error).message}
+                </p>
+              )}
+              <button
+                onClick={() => {
+                  if (
+                    confirm(
+                      `Cancel order ${result.order.order_number}? This cannot be undone.`,
+                    )
+                  ) {
+                    cancelMutation.mutate();
+                  }
+                }}
+                disabled={cancelMutation.isPending}
+                className="inline-flex items-center gap-2 rounded-md border border-red-300 bg-white px-4 py-2 text-sm font-medium text-red-700 hover:bg-red-100 disabled:opacity-50"
+              >
+                <XCircle className="h-4 w-4" />
+                {cancelMutation.isPending ? "Cancelling…" : "Cancel this order"}
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>

@@ -1,5 +1,5 @@
 import { apiClient } from "./client";
-import { OrderDetailSchema, type OrderDetail } from "../types";
+import { OrderDetailSchema, OrderSchema, type OrderDetail, type Order } from "../types";
 
 export type CreateOrderPayload = {
   customer: {
@@ -37,4 +37,15 @@ export async function trackOrder(
     email,
   });
   return OrderDetailSchema.parse(data);
+}
+
+export async function cancelOrder(
+  orderNumber: string,
+  email: string,
+): Promise<Order> {
+  const { data } = await apiClient.post("/api/orders/cancel", {
+    order_number: orderNumber,
+    email,
+  });
+  return OrderSchema.parse(data);
 }
