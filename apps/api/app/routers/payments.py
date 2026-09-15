@@ -9,6 +9,7 @@ from fastapi import APIRouter, HTTPException, Request, status
 
 from app.core.config import settings
 from app.core.db import get_supabase
+from app.core.rate_limit import limiter
 from app.schemas.payments import (
     InitializePaymentRequest,
     InitializePaymentResponse,
@@ -44,7 +45,8 @@ def _notify_order_confirmed(supabase, order: dict) -> None:
 
 
 @router.post("/initialize", response_model=InitializePaymentResponse)
-def initialize_payment(payload: InitializePaymentRequest):
+@limiter.limit("10/minute")
+def initialize_payment(request: Request, payload: InitializePaymentRequest):
     """Start a Paystack transaction for an order's total.
 
     Only orders still in 'pending_payment' can be paid. `total` already

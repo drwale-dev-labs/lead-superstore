@@ -1,6 +1,7 @@
-from fastapi import APIRouter, Header, HTTPException, status
+from fastapi import APIRouter, Header, HTTPException, Request, status
 
 from app.core.db import get_supabase
+from app.core.rate_limit import limiter
 from app.schemas.customers import RequestLoginCode, VerifyLoginCode
 from app.services import customer_auth
 from app.services import email as email_service
@@ -9,7 +10,8 @@ router = APIRouter()
 
 
 @router.post("/request-code", status_code=status.HTTP_204_NO_CONTENT)
-def request_login_code(payload: RequestLoginCode):
+@limiter.limit("5/minute")
+def request_login_code(request: Request, payload: RequestLoginCode):
     """Email a one-time login code, if this email belongs to a customer.
 
     Always returns 204 regardless of whether the email is registered — this
@@ -35,7 +37,8 @@ def request_login_code(payload: RequestLoginCode):
 
 
 @router.post("/verify-code")
-def verify_login_code(payload: VerifyLoginCode):
+@limiter.limit("10/minute")
+def verify_login_code(request: Request, payload: VerifyLoginCode):
     """Exchange a valid one-time code for a 30-day session token."""
     supabase = get_supabase()
 
