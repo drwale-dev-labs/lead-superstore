@@ -179,7 +179,7 @@ export default function ProductEditPage({
       </section>
 
       {/* Stock */}
-      <section className="rounded-lg border border-stone-200 bg-white p-6">
+      <section id="stock" className="scroll-mt-6 rounded-lg border border-stone-200 bg-white p-6">
         <h2 className="mb-4 flex items-center gap-2 text-sm font-semibold text-black border-b border-stone-100 pb-2">
           <Boxes className="h-4 w-4" />
           Stock by outlet

@@ -263,10 +263,36 @@ def admin_get_product_stock(product_id: UUID, _user_id: str = Depends(require_hr
         .execute()
     )
 
+    # Some products (e.g. bulk-imported ones) never got their product_stock
+    # rows seeded. Backfill missing outlets in the response as quantity 0 so
+    # they're still editable here, instead of silently disappearing.
+    covered_outlet_ids = {row["outlet_id"] for row in stock_resp.data}
+    outlets_resp = (
+        supabase.table("outlets")
+        .select("id, name, city, is_warehouse")
+        .eq("is_active", True)
+        .execute()
+    )
+    stock = list(stock_resp.data)
+    for outlet in outlets_resp.data:
+        if outlet["id"] not in covered_outlet_ids:
+            stock.append(
+                {
+                    "outlet_id": outlet["id"],
+                    "quantity": 0,
+                    "updated_at": None,
+                    "outlets": {
+                        "name": outlet["name"],
+                        "city": outlet["city"],
+                        "is_warehouse": outlet["is_warehouse"],
+                    },
+                }
+            )
+
     return {
         "product_id": str(product_id),
         "is_restaurant_item": False,
-        "stock": stock_resp.data,
+        "stock": stock,
     }
 
 

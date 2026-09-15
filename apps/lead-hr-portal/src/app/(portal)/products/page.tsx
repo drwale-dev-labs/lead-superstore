@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Plus, Search, EyeOff, Star } from "lucide-react";
+import { Plus, Search, EyeOff, Star, Boxes } from "lucide-react";
 import { fetchAdminProducts } from "@/lib/api/products";
 import { LoadingState, ErrorState, EmptyState } from "@/components/ui/states";
 import { formatNaira } from "@/lib/types";
@@ -92,6 +92,7 @@ export default function ProductsPage() {
                 <th className="px-4 py-3 text-left font-medium">Category</th>
                 <th className="px-4 py-3 text-right font-medium">Price</th>
                 <th className="px-4 py-3 text-left font-medium">Flags</th>
+                <th className="px-4 py-3 text-right font-medium">Stock</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-stone-100">
@@ -143,6 +144,19 @@ export default function ProductsPage() {
                         </span>
                       )}
                     </div>
+                  </td>
+                  <td className="px-4 py-3 text-right">
+                    {p.is_restaurant_item ? (
+                      <span className="text-xs text-stone-400">—</span>
+                    ) : (
+                      <Link
+                        href={`/products/${p.id}#stock`}
+                        className="inline-flex items-center gap-1 text-xs font-medium text-orange-700 hover:underline"
+                      >
+                        <Boxes className="h-3.5 w-3.5" />
+                        Set stock
+                      </Link>
+                    )}
                   </td>
                 </tr>
               ))}
