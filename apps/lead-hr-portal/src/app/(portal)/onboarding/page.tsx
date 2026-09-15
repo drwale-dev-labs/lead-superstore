@@ -13,15 +13,17 @@ import {
   Camera,
   Wallet,
   UserCheck,
+  History,
 } from "lucide-react";
 import { fetchOutlets } from "@/lib/api/outlets";
 import { fetchRoles } from "@/lib/api/roles";
-import { createStaff, activateStaff, activateExistingStaff } from "@/lib/api/staff";
-import { createSalaryStructure } from "@/lib/api/salary";
+import { createStaff, activateStaff, activateExistingStaff, fetchStaff } from "@/lib/api/staff";
+import { createSalaryStructure, fetchSalaryStructures } from "@/lib/api/salary";
 import {
   addReference,
   addGuarantor,
   uploadStaffPhoto,
+  fetchVerificationStatus,
 } from "@/lib/api/verification";
 import { PhotoCapture } from "@/components/staff/photo-capture";
 import { LoadingState, ErrorState } from "@/components/ui/states";
@@ -48,6 +50,59 @@ export default function OnboardingPage() {
   const router = useRouter();
   const qc = useQueryClient();
 
+  const [resumingId, setResumingId] = useState<string | null>(null);
+
+  const inProgressQuery = useQuery({
+    queryKey: ["staff", "onboarding-in-progress"],
+    queryFn: async () => {
+      const [onboarding, pendingVerification] = await Promise.all([
+        fetchStaff({ status: "onboarding" }),
+        fetchStaff({ status: "pending_verification" }),
+      ]);
+      return [...onboarding, ...pendingVerification];
+    },
+    enabled: stage === "choice",
+  });
+
+  async function resumeOnboarding(s: Staff) {
+    setResumingId(s.id);
+    try {
+      // onboarding_path is recorded on the staff record at Register time —
+      // no need (and no reliable way) to infer it from later data, since
+      // e.g. salary can also be set independently of the onboarding wizard.
+      const resumedPath: Path = s.onboarding_path ?? "new_hire";
+      const isExistingPath = resumedPath === "existing_staff";
+
+      const [salaryStructures, verification] = await Promise.all([
+        isExistingPath ? fetchSalaryStructures(s.id) : Promise.resolve([]),
+        isExistingPath ? Promise.resolve(null) : fetchVerificationStatus(s.id),
+      ]);
+      const hasSalary = salaryStructures.length > 0;
+      const hasPhoto = !!s.photo_path;
+
+      setStaff(s);
+      setPath(resumedPath);
+      setPhotoDone(hasPhoto);
+      setSalaryDone(hasSalary);
+      setRefDone(verification?.has_reference ?? false);
+      setGuarDone(verification?.has_guarantor ?? false);
+
+      if (!hasPhoto) {
+        setStage("photo");
+      } else if (isExistingPath) {
+        setStage(hasSalary ? "review" : "salary");
+      } else if (!verification?.has_reference) {
+        setStage("reference");
+      } else if (!verification?.has_guarantor) {
+        setStage("guarantor");
+      } else {
+        setStage("review");
+      }
+    } finally {
+      setResumingId(null);
+    }
+  }
+
   const isExisting = path === "existing_staff";
 
   const stages: { key: Stage; label: string; icon: typeof UserPlus }[] = isExisting
@@ -70,8 +125,55 @@ export default function OnboardingPage() {
   if (stage === "choice") {
     return (
       <div className="mx-auto max-w-2xl space-y-6">
+        {inProgressQuery.data && inProgressQuery.data.length > 0 && (
+          <div className="rounded-lg border border-orange-200 bg-orange-50 p-4">
+            <h3 className="flex items-center gap-1.5 text-sm font-semibold text-black">
+              <History className="h-4 w-4 text-orange-700" />
+              Continue an in-progress onboarding
+            </h3>
+            <p className="mt-1 text-xs text-stone-600">
+              These employees were registered but haven&apos;t been activated yet.
+            </p>
+            <ul className="mt-3 space-y-2">
+              {inProgressQuery.data.map((s) => (
+                <li
+                  key={s.id}
+                  className="flex items-center justify-between gap-3 rounded-md border border-orange-100 bg-white px-3 py-2"
+                >
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="truncate text-sm font-medium text-black">
+                        {s.first_name} {s.last_name}
+                      </span>
+                      <span
+                        className={`flex-shrink-0 rounded-full px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide ${
+                          s.onboarding_path === "existing_staff"
+                            ? "bg-stone-100 text-stone-600"
+                            : "bg-orange-100 text-orange-700"
+                        }`}
+                      >
+                        {s.onboarding_path === "existing_staff" ? "Existing staff" : "New hire"}
+                      </span>
+                    </div>
+                    <div className="text-xs text-stone-500">
+                      {s.roles?.name ?? "No role yet"} · {s.outlets?.name ?? "No outlet yet"}
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => resumeOnboarding(s)}
+                    disabled={resumingId !== null}
+                    className="flex-shrink-0 rounded-md bg-orange-700 px-3 py-1.5 text-xs font-medium text-white hover:bg-orange-800 disabled:opacity-50"
+                  >
+                    {resumingId === s.id ? "Loading…" : "Continue"}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
         <p className="text-sm text-stone-600">
-          Choose the onboarding path that fits this employee.
+          Or start onboarding a new employee — choose the path that fits.
         </p>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <button
@@ -161,8 +263,9 @@ export default function OnboardingPage() {
       </div>
 
       {/* Stage content */}
-      {stage === "register" && (
+      {stage === "register" && path && (
         <RegisterStage
+          path={path}
           onSuccess={(s) => {
             setStaff(s);
             setStage("photo");
@@ -189,7 +292,7 @@ export default function OnboardingPage() {
           }}
         />
       )}
-      {stage === "reference" && staff && (
+      {stage === "reference" && staff && !isExisting && (
         <ReferenceStage
           staffId={staff.id}
           onDone={() => {
@@ -198,7 +301,7 @@ export default function OnboardingPage() {
           }}
         />
       )}
-      {stage === "guarantor" && staff && (
+      {stage === "guarantor" && staff && !isExisting && (
         <GuarantorStage
           staffId={staff.id}
           onDone={() => {
@@ -225,7 +328,13 @@ export default function OnboardingPage() {
 // Stage 1 — Register
 // ============================================================================
 
-function RegisterStage({ onSuccess }: { onSuccess: (s: Staff) => void }) {
+function RegisterStage({
+  path,
+  onSuccess,
+}: {
+  path: Path;
+  onSuccess: (s: Staff) => void;
+}) {
   const outletsQuery = useQuery({ queryKey: ["outlets"], queryFn: fetchOutlets });
   const rolesQuery = useQuery({ queryKey: ["roles"], queryFn: () => fetchRoles() });
 
@@ -251,6 +360,7 @@ function RegisterStage({ onSuccess }: { onSuccess: (s: Staff) => void }) {
       bank_account_number: (form.get("bank_account_number") as string) || null,
       bank_account_name: (form.get("bank_account_name") as string) || null,
       bank_sort_code: (form.get("bank_sort_code") as string) || null,
+      onboarding_path: path,
     });
   }
 
