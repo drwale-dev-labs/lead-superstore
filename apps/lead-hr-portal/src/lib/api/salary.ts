@@ -23,10 +23,13 @@ export type CreateSalaryPayload = {
 
 export async function createSalaryStructure(
   payload: CreateSalaryPayload,
-): Promise<SalaryStructure> {
+): Promise<{ structure: SalaryStructure; adjustments: string[] }> {
   const { data } = await apiClient.post(
     "/api/payroll/salary-structures",
     payload,
   );
-  return SalaryStructureSchema.parse(data);
+  return {
+    structure: SalaryStructureSchema.parse(data),
+    adjustments: Array.isArray(data.adjustments) ? data.adjustments : [],
+  };
 }

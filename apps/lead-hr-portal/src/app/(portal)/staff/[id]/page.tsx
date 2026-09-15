@@ -21,6 +21,7 @@ import {
   terminateStaff,
   type UpdateStaffPayload,
   type TrainingBondOutcome,
+  type TerminationReason,
 } from "@/lib/api/staff";
 import { fetchOutlets } from "@/lib/api/outlets";
 import { fetchRoles } from "@/lib/api/roles";
@@ -53,6 +54,7 @@ export default function StaffDetailPage({
   const [editOpen, setEditOpen] = useState(false);
   const [terminateOpen, setTerminateOpen] = useState(false);
   const [bondNotice, setBondNotice] = useState<TrainingBondOutcome>(null);
+  const [editAdjustments, setEditAdjustments] = useState<string[]>([]);
 
   const staffQuery = useQuery({
     queryKey: ["staff", id],
@@ -85,15 +87,27 @@ export default function StaffDetailPage({
 
   const editMut = useMutation({
     mutationFn: (payload: UpdateStaffPayload) => updateStaff(id, payload),
-    onSuccess: () => {
+    onSuccess: ({ adjustments }) => {
       qc.invalidateQueries({ queryKey: ["staff", id] });
       qc.invalidateQueries({ queryKey: ["staff"] });
+      qc.invalidateQueries({ queryKey: ["periods"] });
+      qc.invalidateQueries({ queryKey: ["period"] });
+      qc.invalidateQueries({ queryKey: ["assignments", id] });
       setEditOpen(false);
+      setEditAdjustments(adjustments);
     },
   });
 
   const terminateMut = useMutation({
-    mutationFn: () => terminateStaff(id),
+    mutationFn: ({
+      reason,
+      note,
+      terminatedAt,
+    }: {
+      reason: TerminationReason;
+      note?: string;
+      terminatedAt?: string;
+    }) => terminateStaff(id, reason, note, terminatedAt),
     onSuccess: ({ training_bond }) => {
       qc.invalidateQueries({ queryKey: ["staff", id] });
       qc.invalidateQueries({ queryKey: ["staff"] });
@@ -128,7 +142,9 @@ export default function StaffDetailPage({
         <TerminateModal
           staff={s}
           onClose={() => setTerminateOpen(false)}
-          onConfirm={() => terminateMut.mutate()}
+          onConfirm={(reason, note, terminatedAt) =>
+            terminateMut.mutate({ reason, note, terminatedAt })
+          }
           pending={terminateMut.isPending}
           error={terminateMut.isError ? (terminateMut.error as Error).message : null}
         />
@@ -137,6 +153,23 @@ export default function StaffDetailPage({
         <ArrowLeft className="h-3.5 w-3.5" />
         All employees
       </Link>
+
+      {editAdjustments.length > 0 && (
+        <div className="rounded-md border border-blue-200 bg-blue-50 p-4 text-sm text-blue-800">
+          <strong>Hire date changed — related data was updated automatically:</strong>
+          <ul className="mt-1.5 ml-4 list-disc space-y-0.5">
+            {editAdjustments.map((note, idx) => (
+              <li key={idx}>{note}</li>
+            ))}
+          </ul>
+          <button
+            onClick={() => setEditAdjustments([])}
+            className="mt-2 text-blue-700 underline hover:text-blue-900"
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
 
       {bondNotice && (
         <div className="rounded-md border border-orange-200 bg-orange-50 p-4 text-sm text-orange-800">
@@ -184,6 +217,28 @@ export default function StaffDetailPage({
                 <span>{s.outlets?.name ?? "—"}</span>
                 <StatusBadge status={s.status} />
               </div>
+              {s.status === "terminated" && (
+                <p className="mt-1 text-xs text-stone-500">
+                  {s.terminated_at && (
+                    <span>
+                      Terminated{" "}
+                      {new Date(s.terminated_at).toLocaleDateString("en-NG", {
+                        year: "numeric",
+                        month: "short",
+                        day: "numeric",
+                      })}
+                    </span>
+                  )}
+                  {s.termination_reason && (
+                    <span>
+                      {s.terminated_at ? " — " : ""}
+                      {TERMINATION_REASONS.find((r) => r.value === s.termination_reason)
+                        ?.label ?? s.termination_reason}
+                    </span>
+                  )}
+                  {s.termination_note && <span> — {s.termination_note}</span>}
+                </p>
+              )}
             </div>
           </div>
           
@@ -613,6 +668,13 @@ function EditStaffModal({
   );
 }
 
+const TERMINATION_REASONS: { value: TerminationReason; label: string }[] = [
+  { value: "resigned", label: "Resigned" },
+  { value: "sacked", label: "Sacked (terminated for cause)" },
+  { value: "absconded", label: "Left without notice (absconded)" },
+  { value: "other", label: "Other" },
+];
+
 function TerminateModal({
   staff,
   onClose,
@@ -622,10 +684,20 @@ function TerminateModal({
 }: {
   staff: Staff;
   onClose: () => void;
-  onConfirm: () => void;
+  onConfirm: (reason: TerminationReason, note?: string, terminatedAt?: string) => void;
   pending: boolean;
   error: string | null;
 }) {
+  const today = new Date().toISOString().slice(0, 10);
+  const [reason, setReason] = useState<TerminationReason | "">("");
+  const [note, setNote] = useState("");
+  const [terminatedAt, setTerminatedAt] = useState(today);
+
+  function handleConfirm() {
+    if (!reason) return;
+    onConfirm(reason, note.trim() || undefined, terminatedAt);
+  }
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-stone-900/40 p-4">
       <div className="w-full max-w-md rounded-lg bg-white shadow-xl">
@@ -644,10 +716,50 @@ function TerminateModal({
             <AlertTriangle className="mt-0.5 h-4 w-4 flex-shrink-0" />
             <p>
               This sets <strong>{staff.first_name} {staff.last_name}</strong>&apos;s status to
-              &quot;terminated&quot; with today&apos;s date. Their payroll history is preserved
-              — this is not a deletion and cannot be easily undone.
+              &quot;terminated&quot;. Their payroll history is preserved — this is not a
+              deletion and cannot be easily undone.
             </p>
           </div>
+
+          <ModalField label="Date they left" required>
+            <input
+              type="date"
+              value={terminatedAt}
+              max={today}
+              onChange={(e) => setTerminatedAt(e.target.value)}
+              className={modalInputCls}
+            />
+          </ModalField>
+          <p className="-mt-2 text-xs text-stone-500">
+            Use the actual date they left, not today&apos;s date, if recording this after
+            the fact — it determines their training bond and final payroll proration.
+          </p>
+
+          <ModalField label="Reason" required>
+            <select
+              value={reason}
+              onChange={(e) => setReason(e.target.value as TerminationReason)}
+              className={modalInputCls}
+            >
+              <option value="">Select a reason…</option>
+              {TERMINATION_REASONS.map((r) => (
+                <option key={r.value} value={r.value}>
+                  {r.label}
+                </option>
+              ))}
+            </select>
+          </ModalField>
+
+          <ModalField label="Note (optional)">
+            <textarea
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              rows={2}
+              placeholder="Any additional detail…"
+              className={modalInputCls}
+            />
+          </ModalField>
+
           {error && <p className="text-xs text-red-600">{error}</p>}
           <div className="flex justify-end gap-2 border-t border-stone-100 pt-4">
             <button
@@ -657,8 +769,8 @@ function TerminateModal({
               Cancel
             </button>
             <button
-              onClick={onConfirm}
-              disabled={pending}
+              onClick={handleConfirm}
+              disabled={pending || !reason}
               className="rounded-md bg-red-700 px-4 py-2 text-sm font-medium text-white hover:bg-red-800 disabled:opacity-50"
             >
               {pending ? "Terminating…" : "Confirm termination"}

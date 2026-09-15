@@ -45,6 +45,21 @@ export default function EmployeesPage() {
     };
   }, [staffQuery.data]);
 
+  const groupedByUnit = useMemo(() => {
+    if (!staffQuery.data) return null;
+    const groups = new Map<string, typeof staffQuery.data>();
+    for (const s of staffQuery.data) {
+      const unit = s.roles?.unit ?? "Unassigned";
+      if (!groups.has(unit)) groups.set(unit, []);
+      groups.get(unit)!.push(s);
+    }
+    return [...groups.entries()].sort(([a], [b]) => {
+      if (a === "Unassigned") return 1;
+      if (b === "Unassigned") return -1;
+      return a.localeCompare(b);
+    });
+  }, [staffQuery.data]);
+
   return (
     <div className="space-y-6">
       <div className="flex items-start justify-between gap-4">
@@ -128,62 +143,69 @@ export default function EmployeesPage() {
         />
       )}
 
-      {staffQuery.data && staffQuery.data.length > 0 && (
-        <div className="overflow-hidden rounded-lg border border-stone-200 bg-white">
-          <table className="w-full text-sm">
-            <thead className="bg-stone-50 text-xs uppercase tracking-wider text-stone-500">
-              <tr>
-                <th className="px-4 py-3 text-left font-medium">Name</th>
-                <th className="px-4 py-3 text-left font-medium">Role</th>
-                <th className="px-4 py-3 text-left font-medium">Outlet</th>
-                <th className="px-4 py-3 text-left font-medium">Hired</th>
-                <th className="px-4 py-3 text-left font-medium">Status</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-stone-100">
-              {staffQuery.data.map((s) => (
-                <tr key={s.id} className="hover:bg-stone-50">
-                <td className="px-4 py-3">
-                  <div className="flex items-center gap-3">
-                    <Avatar
-                      staffId={s.id}
-                      hasPhoto={!!s.photo_path}
-                      firstName={s.first_name}
-                      lastName={s.last_name}
-                      size="sm"
-                    />
-                    <div>
-                      <Link
-                        href={`/staff/${s.id}`}
-                        className="font-medium text-black hover:text-orange-700"
-                      >
-                        {s.first_name} {s.last_name}
-                      </Link>
-                      {s.phone && (
-                        <div className="text-xs text-stone-500">{s.phone}</div>
-                      )}
-                    </div>
-                  </div>
-                </td>
-                  <td className="px-4 py-3 text-stone-700">
-                    {s.roles?.name ?? "—"}
-                    {s.roles?.unit && (
-                      <div className="text-xs text-stone-500">{s.roles.unit}</div>
-                    )}
-                  </td>
-                  <td className="px-4 py-3 text-stone-700">
-                    {s.outlets?.name ?? "—"}
-                  </td>
-                  <td className="px-4 py-3 text-xs text-stone-600">
-                    {s.hired_at ?? "—"}
-                  </td>
-                  <td className="px-4 py-3">
-                    <StatusBadge status={s.status} />
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+      {groupedByUnit && groupedByUnit.length > 0 && (
+        <div className="space-y-6">
+          {groupedByUnit.map(([unit, staff]) => (
+            <div key={unit} className="overflow-hidden rounded-lg border border-stone-200 bg-white">
+              <div className="flex items-center justify-between bg-stone-50 px-4 py-2.5 border-b border-stone-200">
+                <h3 className="text-xs font-semibold uppercase tracking-wider text-stone-700">
+                  {unit}
+                </h3>
+                <span className="text-xs text-stone-500">{staff.length} staff</span>
+              </div>
+              <table className="w-full text-sm">
+                <thead className="bg-stone-50 text-xs uppercase tracking-wider text-stone-500">
+                  <tr>
+                    <th className="px-4 py-3 text-left font-medium">Name</th>
+                    <th className="px-4 py-3 text-left font-medium">Role</th>
+                    <th className="px-4 py-3 text-left font-medium">Outlet</th>
+                    <th className="px-4 py-3 text-left font-medium">Hired</th>
+                    <th className="px-4 py-3 text-left font-medium">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-stone-100">
+                  {staff.map((s) => (
+                    <tr key={s.id} className="hover:bg-stone-50">
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-3">
+                          <Avatar
+                            staffId={s.id}
+                            hasPhoto={!!s.photo_path}
+                            firstName={s.first_name}
+                            lastName={s.last_name}
+                            size="sm"
+                          />
+                          <div>
+                            <Link
+                              href={`/staff/${s.id}`}
+                              className="font-medium text-black hover:text-orange-700"
+                            >
+                              {s.first_name} {s.last_name}
+                            </Link>
+                            {s.phone && (
+                              <div className="text-xs text-stone-500">{s.phone}</div>
+                            )}
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-stone-700">
+                        {s.roles?.name ?? "—"}
+                      </td>
+                      <td className="px-4 py-3 text-stone-700">
+                        {s.outlets?.name ?? "—"}
+                      </td>
+                      <td className="px-4 py-3 text-xs text-stone-600">
+                        {s.hired_at ?? "—"}
+                      </td>
+                      <td className="px-4 py-3">
+                        <StatusBadge status={s.status} />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ))}
         </div>
       )}
     </div>

@@ -13,6 +13,7 @@ import { formatNaira } from "@/lib/types";
 
 export function SalarySection({ staffId }: { staffId: string }) {
   const [modalOpen, setModalOpen] = useState(false);
+  const [adjustments, setAdjustments] = useState<string[]>([]);
 
   const query = useQuery({
     queryKey: ["salary-structures", staffId],
@@ -105,11 +106,29 @@ export function SalarySection({ staffId }: { staffId: string }) {
         )}
       </section>
 
+      {adjustments.length > 0 && (
+        <div className="rounded-md border border-blue-200 bg-blue-50 p-4 text-sm text-blue-800">
+          <strong>Salary changed — draft payroll was updated automatically:</strong>
+          <ul className="mt-1.5 ml-4 list-disc space-y-0.5">
+            {adjustments.map((note, idx) => (
+              <li key={idx}>{note}</li>
+            ))}
+          </ul>
+          <button
+            onClick={() => setAdjustments([])}
+            className="mt-2 text-blue-700 underline hover:text-blue-900"
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
+
       <SalaryModal
         staffId={staffId}
         currentSalary={current?.gross_salary ?? null}
         open={modalOpen}
         onClose={() => setModalOpen(false)}
+        onAdjusted={setAdjustments}
       />
     </>
   );
@@ -120,19 +139,24 @@ function SalaryModal({
   currentSalary,
   open,
   onClose,
+  onAdjusted,
 }: {
   staffId: string;
   currentSalary: number | null;
   open: boolean;
   onClose: () => void;
+  onAdjusted: (notes: string[]) => void;
 }) {
   const qc = useQueryClient();
   const today = new Date().toISOString().slice(0, 10);
 
   const mutation = useMutation({
     mutationFn: createSalaryStructure,
-    onSuccess: () => {
+    onSuccess: ({ adjustments }) => {
       qc.invalidateQueries({ queryKey: ["salary-structures", staffId] });
+      qc.invalidateQueries({ queryKey: ["periods"] });
+      qc.invalidateQueries({ queryKey: ["period"] });
+      onAdjusted(adjustments);
       onClose();
     },
   });

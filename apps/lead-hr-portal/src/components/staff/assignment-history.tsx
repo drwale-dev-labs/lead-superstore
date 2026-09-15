@@ -17,10 +17,13 @@ export function AssignmentHistory({ staffId }: { staffId: string }) {
     return <p className="text-xs text-stone-500">No assignment history recorded.</p>;
   }
 
+  // Assignments come back newest-first (started_at desc), so the entry
+  // immediately after this one in the array is the role they held before.
   return (
     <ol className="relative space-y-4 border-l border-stone-200 pl-5">
-      {query.data.map((a) => {
+      {query.data.map((a, idx) => {
         const isCurrent = a.ended_at === null;
+        const previous = query.data![idx + 1];
         return (
           <li key={a.id} className="relative">
             {/* Dot */}
@@ -44,6 +47,15 @@ export function AssignmentHistory({ staffId }: { staffId: string }) {
                   {formatDate(a.started_at)}
                   {a.ended_at ? ` → ${formatDate(a.ended_at)}` : " → present"}
                 </div>
+                {previous && !a.is_imported && (
+                  <p className="mt-1.5 text-xs text-stone-600">
+                    <span className="font-medium">Moved from: </span>
+                    {previous.roles?.name ?? "—"}
+                    {previous.outlets?.name && previous.outlets.name !== a.outlets?.name
+                      ? ` @ ${previous.outlets.name}`
+                      : ""}
+                  </p>
+                )}
                 {a.transfer_reason && !a.is_imported && (
                   <p className="mt-1.5 text-xs text-stone-600">
                     <span className="font-medium">Reason: </span>

@@ -35,6 +35,7 @@ export type CreateStaffPayload = {
   bank_account_number?: string | null;
   bank_account_name?: string | null;
   bank_sort_code?: string | null;
+  onboarding_path?: "new_hire" | "existing_staff";
 };
 
 export async function createStaff(payload: CreateStaffPayload): Promise<Staff> {
@@ -71,9 +72,12 @@ export type UpdateStaffPayload = Partial<{
 export async function updateStaff(
   id: string,
   payload: UpdateStaffPayload,
-): Promise<Staff> {
+): Promise<{ staff: Staff; adjustments: string[] }> {
   const { data } = await apiClient.patch(`/api/staff/${id}`, payload);
-  return StaffSchema.parse(data);
+  return {
+    staff: StaffSchema.parse(data),
+    adjustments: Array.isArray(data.adjustments) ? data.adjustments : [],
+  };
 }
 
 export type TrainingBondOutcome = {
@@ -82,9 +86,16 @@ export type TrainingBondOutcome = {
   outstanding_balance?: number;
 } | null;
 
+export type TerminationReason = "resigned" | "sacked" | "absconded" | "other";
+
 export async function terminateStaff(
   id: string,
+  reason: TerminationReason,
+  note?: string,
+  terminatedAt?: string,
 ): Promise<{ staff: Staff; training_bond: TrainingBondOutcome }> {
-  const { data } = await apiClient.delete(`/api/staff/${id}`);
+  const { data } = await apiClient.delete(`/api/staff/${id}`, {
+    params: { reason, note: note || undefined, terminated_at: terminatedAt || undefined },
+  });
   return { staff: StaffSchema.parse(data.staff), training_bond: data.training_bond };
 }
