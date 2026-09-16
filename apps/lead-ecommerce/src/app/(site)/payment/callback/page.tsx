@@ -1,5 +1,6 @@
 "use client";
 
+import { Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
@@ -7,6 +8,20 @@ import { CheckCircle2, XCircle, Loader2 } from "lucide-react";
 import { verifyPayment } from "@/lib/api/payments";
 
 export default function PaymentCallbackPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="mx-auto max-w-2xl px-6 py-16 text-center">
+          <Loader2 className="mx-auto h-10 w-10 animate-spin text-orange-700" />
+        </div>
+      }
+    >
+      <PaymentCallbackContent />
+    </Suspense>
+  );
+}
+
+function PaymentCallbackContent() {
   const searchParams = useSearchParams();
   const reference = searchParams.get("reference");
 
