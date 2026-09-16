@@ -2,9 +2,10 @@ import logging
 from datetime import datetime, timezone
 from uuid import UUID
 
-from fastapi import APIRouter, HTTPException, Query, status
+from fastapi import APIRouter, HTTPException, Query, Request, status
 
 from app.core.db import get_supabase
+from app.core.rate_limit import limiter
 from app.schemas.orders import (
     CancelOrderRequest,
     OrderAdminUpdate,
@@ -28,40 +29,14 @@ TERMINAL_STATUSES = {"completed", "cancelled", "refunded"}
 def _restore_order_stock(supabase, order: dict) -> None:
     """Put back the stock this order reserved at checkout.
 
-    Mirrors the atomic decrement the create_order RPC performs — called when
-    an order is cancelled (by the customer or HR) so cancelling doesn't
-    permanently under-report availability. Restaurant items never carried
-    stock rows in the first place, so nothing to do for those.
+    Calls the restore_order_stock Postgres function, which does an atomic
+    `quantity = quantity + restored` update per line item — the same
+    atomicity guarantee as create_order's decrement, so two concurrent
+    cancellations (or a cancel racing a new checkout) can't lose an update
+    the way a separate read-then-write in Python would. Restaurant items
+    never carried stock rows in the first place, so the function skips them.
     """
-    items_resp = (
-        supabase.table("order_items")
-        .select("product_id, quantity")
-        .eq("order_id", order["id"])
-        .execute()
-    )
-    for item in items_resp.data:
-        product = (
-            supabase.table("products")
-            .select("is_restaurant_item")
-            .eq("id", item["product_id"])
-            .execute()
-        )
-        if not product.data or product.data[0]["is_restaurant_item"]:
-            continue
-
-        stock_row = (
-            supabase.table("product_stock")
-            .select("quantity")
-            .eq("product_id", item["product_id"])
-            .eq("outlet_id", order["fulfillment_outlet_id"])
-            .execute()
-        )
-        if not stock_row.data:
-            continue
-        new_quantity = stock_row.data[0]["quantity"] + item["quantity"]
-        supabase.table("product_stock").update({"quantity": new_quantity}).eq(
-            "product_id", item["product_id"]
-        ).eq("outlet_id", order["fulfillment_outlet_id"]).execute()
+    supabase.rpc("restore_order_stock", {"p_order_id": order["id"]}).execute()
 
 # ============================================================================
 # Public router — checkout + order lookup for the e-commerce app
@@ -105,7 +80,8 @@ def _get_or_create_customer(supabase, info) -> str:
 
 
 @public_router.post("/", status_code=status.HTTP_201_CREATED)
-def create_order(payload: OrderCreate):
+@limiter.limit("10/minute")
+def create_order(request: Request, payload: OrderCreate):
     """Create an order. Atomically validates and decrements stock.
 
     Restaurant items are rejected here — they must be ordered via WhatsApp,
@@ -214,7 +190,8 @@ def track_order(payload: OrderTrackRequest):
 
 
 @public_router.post("/cancel")
-def cancel_order(payload: CancelOrderRequest):
+@limiter.limit("10/minute")
+def cancel_order(request: Request, payload: CancelOrderRequest):
     """Let a customer cancel their own order — same order number + email
     lookup as tracking, since there's no customer login required at checkout.
 
@@ -250,13 +227,21 @@ def cancel_order(payload: CancelOrderRequest):
 
     _restore_order_stock(supabase, order)
 
-    response = (
+    supabase.table("orders").update(
+        {"status": "cancelled", "updated_at": datetime.now(timezone.utc).isoformat()}
+    ).eq("id", order["id"]).execute()
+
+    # Re-select with the same outlets/customers joins every other
+    # order-returning endpoint includes, so callers get a consistent shape
+    # regardless of which endpoint they hit.
+    updated = (
         supabase.table("orders")
-        .update({"status": "cancelled", "updated_at": datetime.now(timezone.utc).isoformat()})
+        .select("*, outlets(name, city, phone), customers(first_name, last_name, email, phone)")
         .eq("id", order["id"])
+        .single()
         .execute()
     )
-    return response.data[0]
+    return updated.data
 
 
 @public_router.get("/{order_id}")
