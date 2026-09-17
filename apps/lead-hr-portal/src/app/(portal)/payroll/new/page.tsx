@@ -1,5 +1,6 @@
 "use client";
 
+import { Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -9,6 +10,14 @@ import { createPeriod } from "@/lib/api/payroll";
 import { ErrorState } from "@/components/ui/states";
 
 export default function NewPeriodPage() {
+  return (
+    <Suspense fallback={null}>
+      <NewPeriodPageContent />
+    </Suspense>
+  );
+}
+
+function NewPeriodPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const qc = useQueryClient();
