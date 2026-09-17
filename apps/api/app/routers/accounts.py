@@ -11,7 +11,7 @@ from fastapi import APIRouter, Depends, HTTPException
 
 from app.core.auth import require_hr_user
 from app.core.db import get_supabase
-from app.schemas.accounts import CreateAccountRequest
+from app.schemas.accounts import CreateAccountRequest, ResetPasswordRequest
 
 router = APIRouter()
 
@@ -65,6 +65,24 @@ def create_account(payload: CreateAccountRequest):
         "email": result.user.email,
         "created_at": result.user.created_at,
     }
+
+
+@router.patch("/{account_id}/password", status_code=200)
+def reset_password(account_id: str, payload: ResetPasswordRequest):
+    """Set a new password for another HR portal account.
+
+    For resetting someone else's forgotten password — a user changing
+    their own password should use Supabase's client-side updateUser()
+    with their own session instead, not this admin endpoint.
+    """
+    supabase = get_supabase()
+    try:
+        supabase.auth.admin.update_user_by_id(
+            account_id, {"password": payload.password}
+        )
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Could not reset password: {str(e)}")
+    return {"reset": True}
 
 
 @router.delete("/{account_id}", status_code=200)
