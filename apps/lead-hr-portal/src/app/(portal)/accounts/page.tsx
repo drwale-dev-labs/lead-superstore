@@ -2,14 +2,21 @@
 
 import { useEffect, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { KeyRound, Plus, Trash2, X } from "lucide-react";
-import { fetchAccounts, createAccount, deleteAccount } from "@/lib/api/accounts";
+import { KeyRound, Plus, Trash2, X, RotateCcw } from "lucide-react";
+import {
+  fetchAccounts,
+  createAccount,
+  deleteAccount,
+  resetAccountPassword,
+} from "@/lib/api/accounts";
 import { createClient } from "@/lib/supabase/client";
 import { LoadingState, ErrorState } from "@/components/ui/states";
+import type { Account } from "@/lib/types";
 
 export default function AccountsPage() {
   const qc = useQueryClient();
   const [modalOpen, setModalOpen] = useState(false);
+  const [resetTarget, setResetTarget] = useState<Account | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -92,24 +99,33 @@ export default function AccountsPage() {
                         : "Never"}
                     </td>
                     <td className="px-4 py-3 text-right">
-                      {!isSelf && (
+                      <div className="flex justify-end gap-2">
                         <button
-                          onClick={() => {
-                            if (
-                              confirm(
-                                `Remove access for ${account.email}? They will no longer be able to sign in.`,
-                              )
-                            ) {
-                              deleteMut.mutate(account.id);
-                            }
-                          }}
-                          disabled={deleteMut.isPending}
-                          className="inline-flex items-center gap-1 rounded-md border border-red-300 bg-white px-2.5 py-1 text-xs font-medium text-red-700 hover:bg-red-50 disabled:opacity-50"
+                          onClick={() => setResetTarget(account)}
+                          className="inline-flex items-center gap-1 rounded-md border border-stone-300 bg-white px-2.5 py-1 text-xs font-medium text-stone-700 hover:bg-stone-50"
                         >
-                          <Trash2 className="h-3 w-3" />
-                          Remove
+                          <RotateCcw className="h-3 w-3" />
+                          Reset password
                         </button>
-                      )}
+                        {!isSelf && (
+                          <button
+                            onClick={() => {
+                              if (
+                                confirm(
+                                  `Remove access for ${account.email}? They will no longer be able to sign in.`,
+                                )
+                              ) {
+                                deleteMut.mutate(account.id);
+                              }
+                            }}
+                            disabled={deleteMut.isPending}
+                            className="inline-flex items-center gap-1 rounded-md border border-red-300 bg-white px-2.5 py-1 text-xs font-medium text-red-700 hover:bg-red-50 disabled:opacity-50"
+                          >
+                            <Trash2 className="h-3 w-3" />
+                            Remove
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 );
@@ -124,6 +140,107 @@ export default function AccountsPage() {
       )}
 
       {modalOpen && <CreateAccountModal onClose={() => setModalOpen(false)} />}
+      {resetTarget && (
+        <ResetPasswordModal account={resetTarget} onClose={() => setResetTarget(null)} />
+      )}
+    </div>
+  );
+}
+
+function ResetPasswordModal({
+  account,
+  onClose,
+}: {
+  account: Account;
+  onClose: () => void;
+}) {
+  const [password, setPassword] = useState("");
+  const [done, setDone] = useState(false);
+
+  const mutation = useMutation({
+    mutationFn: () => resetAccountPassword(account.id, password),
+    onSuccess: () => setDone(true),
+  });
+
+  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    mutation.mutate();
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-stone-900/40 p-4">
+      <div className="w-full max-w-md rounded-lg bg-white shadow-xl">
+        <header className="flex items-center justify-between border-b border-stone-100 px-6 py-4">
+          <h2 className="text-base font-semibold text-black">Reset password</h2>
+          <button
+            onClick={onClose}
+            className="rounded-md p-1 text-stone-400 hover:bg-stone-100 hover:text-stone-700"
+            aria-label="Close"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </header>
+
+        {done ? (
+          <div className="space-y-4 p-6">
+            <div className="rounded-md border border-green-200 bg-green-50 p-4 text-sm text-green-800">
+              Password reset for <strong>{account.email}</strong>. Share the new password
+              with them directly.
+            </div>
+            <div className="flex justify-end">
+              <button
+                onClick={onClose}
+                className="rounded-md bg-orange-700 px-4 py-2 text-sm font-medium text-white hover:bg-orange-800"
+              >
+                Done
+              </button>
+            </div>
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit} className="space-y-4 p-6">
+            <p className="text-xs text-stone-500">
+              Set a new password for <strong>{account.email}</strong>. This takes effect
+              immediately — their current session may stay active, but they&apos;ll need
+              the new password next time they sign in.
+            </p>
+            <label className="block">
+              <span className="mb-1 block text-xs font-medium text-stone-600">
+                New password
+              </span>
+              <input
+                type="text"
+                required
+                minLength={8}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="At least 8 characters"
+                className="w-full rounded-md border border-stone-300 bg-white px-3 py-2 text-sm focus:border-orange-700 focus:outline-none"
+              />
+            </label>
+
+            {mutation.isError && (
+              <p className="text-xs text-red-600">{(mutation.error as Error).message}</p>
+            )}
+
+            <div className="flex justify-end gap-2 border-t border-stone-100 pt-4">
+              <button
+                type="button"
+                onClick={onClose}
+                className="rounded-md border border-stone-300 bg-white px-4 py-2 text-sm font-medium text-stone-700 hover:bg-stone-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={mutation.isPending}
+                className="rounded-md bg-orange-700 px-4 py-2 text-sm font-medium text-white hover:bg-orange-800 disabled:opacity-50"
+              >
+                {mutation.isPending ? "Resetting…" : "Reset password"}
+              </button>
+            </div>
+          </form>
+        )}
+      </div>
     </div>
   );
 }

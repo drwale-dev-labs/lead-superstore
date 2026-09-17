@@ -17,3 +17,10 @@ export async function createAccount(
 export async function deleteAccount(accountId: string): Promise<void> {
   await apiClient.delete(`/api/accounts/${accountId}`);
 }
+
+export async function resetAccountPassword(
+  accountId: string,
+  password: string,
+): Promise<void> {
+  await apiClient.patch(`/api/accounts/${accountId}/password`, { password });
+}
