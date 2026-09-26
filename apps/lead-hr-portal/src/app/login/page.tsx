@@ -70,12 +70,20 @@ export default function LoginPage() {
           </div>
 
           <div>
-            <label
-              htmlFor="password"
-              className="mb-1 block text-xs font-medium text-stone-600"
-            >
-              Password
-            </label>
+            <div className="mb-1 flex items-center justify-between">
+              <label
+                htmlFor="password"
+                className="block text-xs font-medium text-stone-600"
+              >
+                Password
+              </label>
+              <a
+                href="#forgot-password"
+                className="text-xs text-orange-700 hover:underline"
+              >
+                Forgot password?
+              </a>
+            </div>
             <input
               id="password"
               type="password"
@@ -102,9 +110,10 @@ export default function LoginPage() {
           </button>
         </form>
 
-        <p className="mt-4 text-center text-xs text-stone-400">
-          Accounts are created by an administrator. Contact your admin if you
-          need access.
+        <p id="forgot-password" className="mt-4 text-center text-xs text-stone-400">
+          Accounts and passwords are managed by an administrator. If you&apos;ve
+          forgotten your password or need access, contact your admin and ask
+          them to reset it from the Accounts page.
         </p>
       </div>
     </div>
