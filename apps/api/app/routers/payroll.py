@@ -7,9 +7,10 @@ from openpyxl import Workbook
 from openpyxl.styles import Font
 from datetime import date
 
-from fastapi import APIRouter, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.responses import StreamingResponse
 
+from app.core.auth import HRUser, require_hr_user_full
 from app.core.db import get_supabase
 from app.schemas.payroll import (
     AddCatchUpRequest,
@@ -612,7 +613,9 @@ def _run_generate_payroll_entries(supabase, period_id: UUID, period_row: dict) -
 
 
 @router.post("/periods/{period_id}/approve")
-def approve_payroll_period(period_id: UUID):
+def approve_payroll_period(
+    period_id: UUID, hr_user: HRUser = Depends(require_hr_user_full)
+):
     """Lock the period and commit loan balance decrements."""
     supabase = get_supabase()
 
@@ -666,6 +669,8 @@ def approve_payroll_period(period_id: UUID):
             {
                 "status": "approved",
                 "approved_at": datetime.now(timezone.utc).isoformat(),
+                "approved_by": hr_user.id,
+                "approved_by_email": hr_user.display_name(),
             }
         )
         .eq("id", str(period_id))

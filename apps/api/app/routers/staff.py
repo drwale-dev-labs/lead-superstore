@@ -2,8 +2,9 @@ from datetime import date, datetime, timezone
 from decimal import Decimal
 from uuid import UUID
 
-from fastapi import APIRouter, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 
+from app.core.auth import HRUser, require_hr_user_full
 from app.core.db import get_supabase
 from app.schemas.staff import StaffCreate, StaffUpdate
 from app.services import training_bond
@@ -325,6 +326,7 @@ def delete_staff(
         "use this when recording a termination after the fact (e.g. they left "
         "days ago and HR is only entering it now).",
     ),
+    hr_user: HRUser = Depends(require_hr_user_full),
 ):
     """Soft-delete by setting status='terminated'. Hard delete is not allowed.
 
@@ -341,6 +343,7 @@ def delete_staff(
         "terminated_at": effective_date.isoformat(),
         "termination_reason": reason,
         "termination_note": note,
+        "terminated_by": hr_user.display_name(),
     }
     response = (
         supabase.table("staff")

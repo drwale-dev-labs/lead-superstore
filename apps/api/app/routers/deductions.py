@@ -1,8 +1,9 @@
 from datetime import datetime, timezone
 from uuid import UUID
 
-from fastapi import APIRouter, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 
+from app.core.auth import HRUser, require_hr_user_full
 from app.core.db import get_supabase
 from app.schemas.deductions import (
     AdvanceCreate,
@@ -39,7 +40,9 @@ def list_loans(
 
 
 @router.post("/loans", status_code=status.HTTP_201_CREATED)
-def create_loan(payload: LoanCreate):
+def create_loan(
+    payload: LoanCreate, hr_user: HRUser = Depends(require_hr_user_full)
+):
     """Create a loan. Balance starts equal to principal."""
     supabase = get_supabase()
 
@@ -51,6 +54,8 @@ def create_loan(payload: LoanCreate):
     insert = payload.model_dump(mode="json")
     insert["balance"] = float(payload.principal)
     insert["approved_at"] = datetime.now(timezone.utc).isoformat()
+    insert["approved_by"] = hr_user.id
+    insert["approved_by_email"] = hr_user.display_name()
 
     response = supabase.table("loans").insert(insert).execute()
     return response.data[0]
@@ -94,12 +99,16 @@ def list_advances(
 
 
 @router.post("/advances", status_code=status.HTTP_201_CREATED)
-def create_advance(payload: AdvanceCreate):
+def create_advance(
+    payload: AdvanceCreate, hr_user: HRUser = Depends(require_hr_user_full)
+):
     """Create a salary advance. Auto-approved on creation; deducted next payroll."""
     supabase = get_supabase()
 
     insert = payload.model_dump(mode="json")
     insert["approved_at"] = datetime.now(timezone.utc).isoformat()
+    insert["approved_by"] = hr_user.id
+    insert["approved_by_email"] = hr_user.display_name()
 
     response = supabase.table("salary_advances").insert(insert).execute()
     return response.data[0]
@@ -167,7 +176,9 @@ def create_fine(payload: FineCreate):
 
 
 @router.post("/fines/{fine_id}/approve")
-def approve_fine(fine_id: UUID):
+def approve_fine(
+    fine_id: UUID, hr_user: HRUser = Depends(require_hr_user_full)
+):
     """Approve a fine so it's included in the next payroll generation."""
     supabase = get_supabase()
 
@@ -188,6 +199,8 @@ def approve_fine(fine_id: UUID):
             {
                 "status": "approved",
                 "approved_at": datetime.now(timezone.utc).isoformat(),
+                "approved_by": hr_user.id,
+                "approved_by_email": hr_user.display_name(),
             }
         )
         .eq("id", str(fine_id))

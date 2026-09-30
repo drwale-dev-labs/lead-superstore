@@ -2,8 +2,9 @@ import logging
 from datetime import datetime, timezone
 from uuid import UUID
 
-from fastapi import APIRouter, HTTPException, Query, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 
+from app.core.auth import HRUser, require_hr_user_full
 from app.core.db import get_supabase
 from app.core.rate_limit import limiter
 from app.schemas.orders import (
@@ -228,7 +229,11 @@ def cancel_order(request: Request, payload: CancelOrderRequest):
     _restore_order_stock(supabase, order)
 
     supabase.table("orders").update(
-        {"status": "cancelled", "updated_at": datetime.now(timezone.utc).isoformat()}
+        {
+            "status": "cancelled",
+            "cancelled_by": f"Customer ({payload.email})",
+            "updated_at": datetime.now(timezone.utc).isoformat(),
+        }
     ).eq("id", order["id"]).execute()
 
     # Re-select with the same outlets/customers joins every other
@@ -335,11 +340,18 @@ def _notify_order_completed(supabase, order: dict) -> None:
 
 
 @admin_router.patch("/{order_id}")
-def update_order(order_id: UUID, payload: OrderAdminUpdate):
+def update_order(
+    order_id: UUID,
+    payload: OrderAdminUpdate,
+    hr_user: HRUser = Depends(require_hr_user_full),
+):
     """Progress an order: change status, set delivery fee, or add staff notes.
 
     Setting delivery_fee recomputes total = subtotal + delivery_fee. Only valid
-    for delivery orders.
+    for delivery orders. Each status transition stamps which logged-in HR
+    account performed it (confirmed_by/prepared_by/completed_by/cancelled_by)
+    so the pipeline is fully attributable — who confirmed vs. who marked it
+    ready vs. who completed it can all be different people.
     """
     supabase = get_supabase()
 
@@ -368,6 +380,16 @@ def update_order(order_id: UUID, payload: OrderAdminUpdate):
 
     if payload.status is not None:
         update_data["status"] = payload.status
+        actor_column = {
+            "confirmed": "confirmed_by",
+            "ready_for_pickup": "prepared_by",
+            "out_for_delivery": "prepared_by",
+            "completed": "completed_by",
+            "cancelled": "cancelled_by",
+            "refunded": "cancelled_by",
+        }.get(payload.status)
+        if actor_column:
+            update_data[actor_column] = hr_user.display_name()
 
     if payload.staff_notes is not None:
         update_data["staff_notes"] = payload.staff_notes

@@ -11,7 +11,11 @@ from fastapi import APIRouter, Depends, HTTPException
 
 from app.core.auth import require_hr_user
 from app.core.db import get_supabase
-from app.schemas.accounts import CreateAccountRequest, ResetPasswordRequest
+from app.schemas.accounts import (
+    CreateAccountRequest,
+    ResetPasswordRequest,
+    UpdateAccountRequest,
+)
 
 router = APIRouter()
 
@@ -27,6 +31,7 @@ def list_accounts():
             {
                 "id": u.id,
                 "email": u.email,
+                "full_name": (u.user_metadata or {}).get("full_name"),
                 "created_at": u.created_at,
                 "last_sign_in_at": u.last_sign_in_at,
             }
@@ -50,6 +55,7 @@ def create_account(payload: CreateAccountRequest):
                 "email": payload.email,
                 "password": payload.password,
                 "email_confirm": True,
+                "user_metadata": {"full_name": payload.full_name} if payload.full_name else {},
             }
         )
     except Exception as e:
@@ -63,7 +69,25 @@ def create_account(payload: CreateAccountRequest):
     return {
         "id": result.user.id,
         "email": result.user.email,
+        "full_name": (result.user.user_metadata or {}).get("full_name"),
         "created_at": result.user.created_at,
+    }
+
+
+@router.patch("/{account_id}", status_code=200)
+def update_account(account_id: str, payload: UpdateAccountRequest):
+    """Set or update an HR account's display name."""
+    supabase = get_supabase()
+    try:
+        result = supabase.auth.admin.update_user_by_id(
+            account_id, {"user_metadata": {"full_name": payload.full_name}}
+        )
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Could not update account: {str(e)}")
+    return {
+        "id": result.user.id,
+        "email": result.user.email,
+        "full_name": (result.user.user_metadata or {}).get("full_name"),
     }
 
 
