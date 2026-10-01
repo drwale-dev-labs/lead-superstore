@@ -9,8 +9,23 @@ export async function fetchAccounts(): Promise<Account[]> {
 export async function createAccount(
   email: string,
   password: string,
+  fullName?: string,
 ): Promise<Account> {
-  const { data } = await apiClient.post("/api/accounts/", { email, password });
+  const { data } = await apiClient.post("/api/accounts/", {
+    email,
+    password,
+    full_name: fullName || undefined,
+  });
+  return AccountSchema.parse(data);
+}
+
+export async function updateAccountName(
+  accountId: string,
+  fullName: string,
+): Promise<Account> {
+  const { data } = await apiClient.patch(`/api/accounts/${accountId}`, {
+    full_name: fullName || null,
+  });
   return AccountSchema.parse(data);
 }
 

@@ -2,12 +2,13 @@
 
 import { useEffect, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { KeyRound, Plus, Trash2, X, RotateCcw } from "lucide-react";
+import { KeyRound, Plus, Trash2, X, RotateCcw, Pencil, Check } from "lucide-react";
 import {
   fetchAccounts,
   createAccount,
   deleteAccount,
   resetAccountPassword,
+  updateAccountName,
 } from "@/lib/api/accounts";
 import { createClient } from "@/lib/supabase/client";
 import { LoadingState, ErrorState } from "@/components/ui/states";
@@ -17,6 +18,8 @@ export default function AccountsPage() {
   const qc = useQueryClient();
   const [modalOpen, setModalOpen] = useState(false);
   const [resetTarget, setResetTarget] = useState<Account | null>(null);
+  const [editingNameId, setEditingNameId] = useState<string | null>(null);
+  const [nameDraft, setNameDraft] = useState("");
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -34,6 +37,15 @@ export default function AccountsPage() {
   const deleteMut = useMutation({
     mutationFn: (id: string) => deleteAccount(id),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["accounts"] }),
+  });
+
+  const updateNameMut = useMutation({
+    mutationFn: ({ id, name }: { id: string; name: string }) =>
+      updateAccountName(id, name),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["accounts"] });
+      setEditingNameId(null);
+    },
   });
 
   return (
@@ -60,6 +72,7 @@ export default function AccountsPage() {
           <table className="w-full text-sm">
             <thead className="bg-stone-50 text-xs uppercase tracking-wider text-stone-500">
               <tr>
+                <th className="px-4 py-3 text-left font-medium">Name</th>
                 <th className="px-4 py-3 text-left font-medium">Email</th>
                 <th className="px-4 py-3 text-left font-medium">Created</th>
                 <th className="px-4 py-3 text-left font-medium">Last sign-in</th>
@@ -69,12 +82,62 @@ export default function AccountsPage() {
             <tbody className="divide-y divide-stone-100">
               {query.data.map((account) => {
                 const isSelf = account.id === currentUserId;
+                const isEditingName = editingNameId === account.id;
                 return (
                   <tr key={account.id} className="hover:bg-stone-50">
                     <td className="px-4 py-3">
+                      {isEditingName ? (
+                        <div className="flex items-center gap-1.5">
+                          <input
+                            autoFocus
+                            type="text"
+                            value={nameDraft}
+                            onChange={(e) => setNameDraft(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") {
+                                updateNameMut.mutate({ id: account.id, name: nameDraft });
+                              }
+                              if (e.key === "Escape") setEditingNameId(null);
+                            }}
+                            placeholder="Full name"
+                            className="w-36 rounded-md border border-stone-300 bg-white px-2 py-1 text-sm focus:border-orange-700 focus:outline-none"
+                          />
+                          <button
+                            onClick={() =>
+                              updateNameMut.mutate({ id: account.id, name: nameDraft })
+                            }
+                            disabled={updateNameMut.isPending}
+                            className="rounded-md p-1 text-green-700 hover:bg-green-50"
+                            aria-label="Save name"
+                          >
+                            <Check className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => {
+                            setEditingNameId(account.id);
+                            setNameDraft(account.full_name ?? "");
+                          }}
+                          className="group flex items-center gap-1.5 text-left"
+                        >
+                          <span
+                            className={
+                              account.full_name
+                                ? "font-medium text-black"
+                                : "italic text-stone-400"
+                            }
+                          >
+                            {account.full_name ?? "No name set"}
+                          </span>
+                          <Pencil className="h-3 w-3 text-stone-300 group-hover:text-stone-500" />
+                        </button>
+                      )}
+                    </td>
+                    <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
                         <KeyRound className="h-3.5 w-3.5 text-stone-400" />
-                        <span className="font-medium text-black">{account.email}</span>
+                        <span className="text-stone-700">{account.email}</span>
                         {isSelf && (
                           <span className="rounded-full bg-orange-100 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-orange-700">
                             You
@@ -247,12 +310,13 @@ function ResetPasswordModal({
 
 function CreateAccountModal({ onClose }: { onClose: () => void }) {
   const qc = useQueryClient();
+  const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [created, setCreated] = useState(false);
 
   const mutation = useMutation({
-    mutationFn: () => createAccount(email, password),
+    mutationFn: () => createAccount(email, password, fullName),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["accounts"] });
       setCreated(true);
@@ -300,6 +364,22 @@ function CreateAccountModal({ onClose }: { onClose: () => void }) {
               They&apos;ll have the same full access as any other account — there are no
               role tiers in this portal.
             </p>
+            <label className="block">
+              <span className="mb-1 block text-xs font-medium text-stone-600">
+                Full name (optional)
+              </span>
+              <input
+                type="text"
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+                placeholder="e.g. Abiodun Ogundeji"
+                className="w-full rounded-md border border-stone-300 bg-white px-3 py-2 text-sm focus:border-orange-700 focus:outline-none"
+              />
+              <span className="mt-1 block text-[11px] text-stone-400">
+                Shown instead of their email wherever we record who did something —
+                confirming orders, approving payroll, etc.
+              </span>
+            </label>
             <label className="block">
               <span className="mb-1 block text-xs font-medium text-stone-600">Email</span>
               <input

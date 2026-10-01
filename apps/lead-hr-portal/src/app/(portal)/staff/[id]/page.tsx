@@ -237,6 +237,7 @@ export default function StaffDetailPage({
                     </span>
                   )}
                   {s.termination_note && <span> — {s.termination_note}</span>}
+                  {s.terminated_by && <span> · Terminated by {s.terminated_by}</span>}
                 </p>
               )}
             </div>

@@ -80,6 +80,7 @@ export const StaffSchema = z.object({
     .nullable()
     .optional(),
   termination_note: z.string().nullable().optional(),
+  terminated_by: z.string().nullable().optional(),
   notes: z.string().nullable(),
   bank_name: z.string().nullable(),
   bank_account_number: z.string().nullable(),
@@ -316,6 +317,7 @@ export const PayrollPeriodSchema = z.object({
   total_net: z.number(),
   approved_at: z.string().nullable(),
   approved_by: z.string().uuid().nullable(),
+  approved_by_email: z.string().nullable().optional(),
   notes: z.string().nullable(),
   created_at: z.string(),
   outlets: z.object({ name: z.string() }).nullable().optional(),
@@ -460,6 +462,7 @@ export const LoanSchema = z.object({
   status: z.enum(["active", "paid_off", "cancelled"]),
   notes: z.string().nullable(),
   approved_at: z.string().nullable(),
+  approved_by_email: z.string().nullable().optional(),
   created_at: z.string(),
   staff: StaffMiniSchema,
 });
@@ -478,6 +481,7 @@ export const AdvanceSchema = z.object({
   reason: z.string().nullable(),
   status: z.enum(["pending", "applied", "cancelled"]),
   approved_at: z.string().nullable(),
+  approved_by_email: z.string().nullable().optional(),
   applied_to_period_id: z.string().uuid().nullable(),
   created_at: z.string(),
   staff: StaffMiniSchema,
@@ -497,6 +501,7 @@ export const FineSchema = z.object({
   reason: z.string(),
   status: z.enum(["pending", "approved", "applied", "cancelled"]),
   approved_at: z.string().nullable(),
+  approved_by_email: z.string().nullable().optional(),
   applied_to_period_id: z.string().uuid().nullable(),
   created_at: z.string(),
   staff: StaffMiniSchema,
@@ -577,6 +582,10 @@ export const OrderSchema = z.object({
   payment_reference: z.string().nullable(),
   paid_at: z.string().nullable(),
   staff_notes: z.string().nullable(),
+  confirmed_by: z.string().nullable().optional(),
+  prepared_by: z.string().nullable().optional(),
+  completed_by: z.string().nullable().optional(),
+  cancelled_by: z.string().nullable().optional(),
   created_at: z.string(),
   updated_at: z.string(),
   outlets: z
@@ -717,6 +726,7 @@ export const ContractsResponseSchema = z.object({
 export const AccountSchema = z.object({
   id: z.string().uuid(),
   email: z.string().nullable(),
+  full_name: z.string().nullable().optional(),
   created_at: z.string(),
   last_sign_in_at: z.string().nullable().optional(),
 });

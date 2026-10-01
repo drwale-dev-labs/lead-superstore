@@ -158,6 +158,11 @@ function LoansList({ query }: { query: ReturnType<typeof useQuery<Loan[]>> }) {
                 {l.notes && (
                   <div className="mt-0.5 text-xs text-stone-500">{l.notes}</div>
                 )}
+                {l.approved_by_email && (
+                  <div className="mt-0.5 text-[11px] text-stone-400">
+                    Approved by {l.approved_by_email}
+                  </div>
+                )}
               </td>
               <td className="px-4 py-3 text-right text-stone-700">
                 {formatNaira(Number(l.principal))}
@@ -262,8 +267,15 @@ function AdvancesList({
         <tbody className="divide-y divide-stone-100">
           {query.data.map((a) => (
             <tr key={a.id} className="hover:bg-stone-50">
-              <td className="px-4 py-3 font-medium text-black">
-                {a.staff?.first_name} {a.staff?.last_name}
+              <td className="px-4 py-3">
+                <div className="font-medium text-black">
+                  {a.staff?.first_name} {a.staff?.last_name}
+                </div>
+                {a.approved_by_email && (
+                  <div className="mt-0.5 text-[11px] text-stone-400">
+                    Approved by {a.approved_by_email}
+                  </div>
+                )}
               </td>
               <td className="px-4 py-3 text-right text-stone-700">
                 {formatNaira(Number(a.amount))}
@@ -350,8 +362,15 @@ function FinesList({ query }: { query: ReturnType<typeof useQuery<Fine[]>> }) {
         <tbody className="divide-y divide-stone-100">
           {query.data.map((f) => (
             <tr key={f.id} className="hover:bg-stone-50">
-              <td className="px-4 py-3 font-medium text-black">
-                {f.staff?.first_name} {f.staff?.last_name}
+              <td className="px-4 py-3">
+                <div className="font-medium text-black">
+                  {f.staff?.first_name} {f.staff?.last_name}
+                </div>
+                {f.approved_by_email && (
+                  <div className="mt-0.5 text-[11px] text-stone-400">
+                    Approved by {f.approved_by_email}
+                  </div>
+                )}
               </td>
               <td className="px-4 py-3 text-right text-stone-700">
                 {formatNaira(Number(f.amount))}

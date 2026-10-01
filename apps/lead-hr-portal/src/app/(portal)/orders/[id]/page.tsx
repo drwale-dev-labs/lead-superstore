@@ -14,6 +14,7 @@ import {
   CheckCircle2,
   XCircle,
   PackageCheck,
+  UserCheck,
 } from "lucide-react";
 import { fetchOrderDetail, updateOrder } from "@/lib/api/orders";
 import { LoadingState, ErrorState } from "@/components/ui/states";
@@ -286,6 +287,47 @@ export default function OrderDetailPage({
           <p className="mt-3 text-xs text-red-600">{(statusMut.error as Error).message}</p>
         )}
       </section>
+
+      {/* Attribution — who did what */}
+      {(order.confirmed_by ||
+        order.prepared_by ||
+        order.completed_by ||
+        order.cancelled_by) && (
+        <section className="rounded-lg border border-stone-200 bg-white p-6">
+          <h2 className="mb-3 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-stone-500">
+            <UserCheck className="h-3.5 w-3.5" />
+            Handled by
+          </h2>
+          <dl className="grid grid-cols-1 gap-2 text-sm sm:grid-cols-2">
+            {order.confirmed_by && (
+              <div className="flex justify-between gap-2 sm:block">
+                <dt className="text-xs text-stone-500">Confirmed by</dt>
+                <dd className="font-medium text-black">{order.confirmed_by}</dd>
+              </div>
+            )}
+            {order.prepared_by && (
+              <div className="flex justify-between gap-2 sm:block">
+                <dt className="text-xs text-stone-500">
+                  {isDelivery ? "Marked out for delivery by" : "Marked ready by"}
+                </dt>
+                <dd className="font-medium text-black">{order.prepared_by}</dd>
+              </div>
+            )}
+            {order.completed_by && (
+              <div className="flex justify-between gap-2 sm:block">
+                <dt className="text-xs text-stone-500">Completed by</dt>
+                <dd className="font-medium text-black">{order.completed_by}</dd>
+              </div>
+            )}
+            {order.cancelled_by && (
+              <div className="flex justify-between gap-2 sm:block">
+                <dt className="text-xs text-stone-500">Cancelled by</dt>
+                <dd className="font-medium text-black">{order.cancelled_by}</dd>
+              </div>
+            )}
+          </dl>
+        </section>
+      )}
 
       {/* Staff notes */}
       <section className="rounded-lg border border-stone-200 bg-white p-6">

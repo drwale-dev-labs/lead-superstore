@@ -192,6 +192,7 @@ export default function PeriodDetailPage({
                   <span className="text-stone-300">·</span>
                   <span>
                     Approved {new Date(period.approved_at).toLocaleDateString()}
+                    {period.approved_by_email && ` by ${period.approved_by_email}`}
                   </span>
                 </>
               )}
