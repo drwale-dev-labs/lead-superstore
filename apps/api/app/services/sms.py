@@ -4,7 +4,17 @@ import httpx
 
 from app.core.config import settings
 
-AFRICASTALKING_BASE_URL = "https://api.africastalking.com/version1/messaging"
+PRODUCTION_BASE_URL = "https://api.africastalking.com/version1/messaging"
+SANDBOX_BASE_URL = "https://api.sandbox.africastalking.com/version1/messaging"
+
+
+def _base_url() -> str:
+    """Sandbox credentials only work against the sandbox host — the
+    production host rejects them with a 401 regardless of the API key.
+    """
+    if settings.AFRICASTALKING_USERNAME == "sandbox":
+        return SANDBOX_BASE_URL
+    return PRODUCTION_BASE_URL
 
 
 def _to_at_format(phone: str) -> str:
@@ -25,7 +35,7 @@ def _send_sms(to_phone: str, message: str) -> None:
         raise RuntimeError("AFRICASTALKING_API_KEY is not configured")
 
     response = httpx.post(
-        AFRICASTALKING_BASE_URL,
+        _base_url(),
         headers={
             "apiKey": settings.AFRICASTALKING_API_KEY,
             "Accept": "application/json",
